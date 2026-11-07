@@ -21,8 +21,10 @@ Foundation stage. No game code yet. See `docs/PROJECT_PLAN.md` for the roadmap.
 | VS Code 1.142 | Installed |
 | Godot 4 | Installed: 4.7.2 stable, at `D:\Downloads\ALL SETUPS\Godot_v4.7.2-stable_win64.exe` (verified) |
 | JDK (Java) | JDK 17.0.21 installed at `C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot` (verified, use this for Android); JDK 25 also present |
-| Android SDK / adb | **Not installed yet** |
-| GitHub CLI / remote | **Not set up yet** |
+| Android SDK / adb | Installed (build-tools 35.0.1, platform 35, NDK 28.1.13356709, CMake 3.10.2.4988404); Godot paths set |
+| Godot export templates | 4.7.2 Android templates installed |
+| Test tablet | Galaxy Tab S6 Lite; USB debugging not enabled yet (postponed) |
+| GitHub remote | Private repo `Ssunraku/Gandus-Table`, connected |
 | Codex CLI | **Not found yet** |
 
 Nothing is installed without the owner's approval.
