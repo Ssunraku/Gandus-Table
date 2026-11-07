@@ -71,6 +71,12 @@ func test_tap_empty_space_clears_selection() -> void:
 	assert_eq(hand.selected_index, -1)
 
 
+func test_clear_selection_puts_the_card_down() -> void:
+	hand.handle_tap(_point_on(6))
+	hand.clear_selection()
+	assert_eq(hand.selected_index, -1)
+
+
 func test_show_hand_with_empty_list_does_not_crash() -> void:
 	var none: Array[Card] = []
 	hand.show_hand(none, AREA, CARD_SIZE)

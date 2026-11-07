@@ -44,6 +44,43 @@ func test_seat_rects_do_not_overlap_hand_rect() -> void:
 			assert_false(r.intersects(l["hand_rect"]), "seat %s vs hand at %s" % [seat, size])
 
 
+func test_seat_rects_do_not_overlap_each_other() -> void:
+	for size in SIZES:
+		var l: Dictionary = TableLayout.compute(size)
+		for a in SEATS:
+			for b in SEATS:
+				if a < b:
+					assert_false((l["seat_rects"][a] as Rect2).intersects(l["seat_rects"][b]), "seats %s and %s at %s" % [a, b, size])
+
+
+func test_seat_bars_do_not_overlap_opponent_fans() -> void:
+	for size in SIZES:
+		var l: Dictionary = TableLayout.compute(size)
+		for seat in SEATS:
+			for fan_seat in [TableState.Seat.WEST, TableState.Seat.NORTH, TableState.Seat.EAST]:
+				assert_false((l["seat_rects"][seat] as Rect2).intersects(l["opponent_fan_rects"][fan_seat]), "bar %s vs fan %s at %s" % [seat, fan_seat, size])
+
+
+func test_seat_bars_do_not_overlap_played_cards() -> void:
+	for size in SIZES:
+		var l: Dictionary = TableLayout.compute(size)
+		var card_size: Vector2 = l["card_size"]
+		for seat in SEATS:
+			for spot_seat in SEATS:
+				var spot: Vector2 = l["play_spots"][spot_seat]
+				var card_rect: Rect2 = Rect2(spot - card_size / 2.0, card_size)
+				assert_false((l["seat_rects"][seat] as Rect2).intersects(card_rect), "bar %s vs card %s at %s" % [seat, spot_seat, size])
+
+
+func test_north_fan_and_bar_clear_of_buttons_and_score_box() -> void:
+	for size in SIZES:
+		var l: Dictionary = TableLayout.compute(size)
+		var blockers: Array[Rect2] = [l["button_rect_left"], l["button_rect_right"], l["score_rect"]]
+		for r in blockers:
+			assert_false(r.intersects(l["opponent_fan_rects"][TableState.Seat.NORTH]), "fan vs %s at %s" % [r, size])
+			assert_false(r.intersects(l["seat_rects"][TableState.Seat.NORTH]), "north bar vs %s at %s" % [r, size])
+
+
 func test_all_rects_inside_screen() -> void:
 	for size in SIZES:
 		var l: Dictionary = TableLayout.compute(size)

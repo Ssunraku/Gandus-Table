@@ -11,7 +11,16 @@ config_version=5
 [application]
 
 config/name="Gandus Table"
+run/main_scene="res://ui/table.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=6
 
 [editor_plugins]
 

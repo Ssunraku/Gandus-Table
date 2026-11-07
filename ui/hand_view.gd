@@ -65,6 +65,10 @@ func handle_tap(point: Vector2) -> void:
 		_select(idx)
 
 
+func clear_selection() -> void:
+	_select(-1)
+
+
 func _gui_input(event: InputEvent) -> void:
 	# Touch is converted to a mouse click by Godot, so handling the mouse covers both.
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:

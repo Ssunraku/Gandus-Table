@@ -19,22 +19,34 @@ static func compute(screen: Vector2) -> Dictionary:
 	var hand_h: float = card_h * 1.1
 	var hand_rect: Rect2 = Rect2(m, screen.y - m - hand_h, screen.x - 2.0 * m, hand_h)
 
-	# Name bars.
-	var side_bar_w: float = maxf(opp_size.y, screen.x * 0.18)
-	var top_bar_w: float = screen.x * (0.6 if portrait else 0.36)
-	# Side fans are centred on the screen; keep them short enough that the side
-	# name bar underneath still ends above the hand.
+	# Corner buttons and the score box come first: the partner's fan and name bar
+	# must stay clear of them.
+	var btn: float = card_h * 0.3
+	var button_left: Rect2 = Rect2(m, m, btn * 3.0, btn)
+	var button_right: Rect2 = Rect2(screen.x - m - btn * 2.0, m, btn * 2.0, btn)
+	var score_w: float = maxf(card_size.x, screen.x * 0.11)
+	var score_rect: Rect2 = Rect2(screen.x - m - score_w, button_right.end.y + m, score_w, card_h * 0.5)
+	var edge: float = maxf(button_left.end.x, screen.x - minf(button_right.position.x, score_rect.position.x)) + m
+	var top_w: float = screen.x - 2.0 * edge  # room left for the partner at the top
+
+	# Side fans are centred on the screen; keep them short enough that they end
+	# above your own name bar (which sits just above your hand).
 	var room_below: float = hand_rect.position.y - 2.0 * m - bar_h - centre.y
 	var fan_len: float = maxf(minf(minf(screen.y * 0.35, screen.x * 0.35), room_below * 2.0), opp_size.x * 2.0)
-	var north_fan: Rect2 = Rect2(screen.x * 0.25, m, screen.x * 0.5, opp_size.y)
+	var fan_w: float = minf(screen.x * 0.5, top_w)
+	var north_fan: Rect2 = Rect2((screen.x - fan_w) / 2.0, m, fan_w, opp_size.y)
 	var west_fan: Rect2 = Rect2(m, centre.y - fan_len / 2.0, opp_size.y, fan_len)
 	var east_fan: Rect2 = Rect2(screen.x - m - opp_size.y, centre.y - fan_len / 2.0, opp_size.y, fan_len)
 
+	# Name bars: partner below their fan; the two sides ABOVE their fans (so they
+	# never run into the cards played in the middle); you above your hand.
+	var side_bar_w: float = maxf(opp_size.y, screen.x * (0.26 if portrait else 0.18))
+	var top_bar_w: float = minf(screen.x * (0.6 if portrait else 0.36), top_w)
 	var seat_rects: Dictionary = {
 		TableState.Seat.SOUTH: Rect2(m, hand_rect.position.y - bar_h - m, side_bar_w, bar_h),
 		TableState.Seat.NORTH: Rect2((screen.x - top_bar_w) / 2.0, north_fan.end.y + m, top_bar_w, bar_h),
-		TableState.Seat.WEST: Rect2(m, west_fan.end.y + m, side_bar_w, bar_h),
-		TableState.Seat.EAST: Rect2(screen.x - m - side_bar_w, east_fan.end.y + m, side_bar_w, bar_h),
+		TableState.Seat.WEST: Rect2(m, west_fan.position.y - m - bar_h, side_bar_w, bar_h),
+		TableState.Seat.EAST: Rect2(screen.x - m - side_bar_w, east_fan.position.y - m - bar_h, side_bar_w, bar_h),
 	}
 
 	var play_spots: Dictionary = {
@@ -43,12 +55,6 @@ static func compute(screen: Vector2) -> Dictionary:
 		TableState.Seat.WEST: centre + Vector2(-card_size.x * 0.9, 0.0),
 		TableState.Seat.EAST: centre + Vector2(card_size.x * 0.9, 0.0),
 	}
-
-	var btn: float = card_h * 0.3
-	var button_left: Rect2 = Rect2(m, m, btn * 3.0, btn)
-	var button_right: Rect2 = Rect2(screen.x - m - btn * 2.0, m, btn * 2.0, btn)
-	var score_w: float = maxf(card_size.x * 0.8, screen.x * 0.09)
-	var score_rect: Rect2 = Rect2(screen.x - m - score_w, button_right.end.y + m, score_w, card_h * 0.5)
 
 	return {
 		"is_portrait": portrait,

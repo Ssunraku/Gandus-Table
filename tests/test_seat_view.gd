@@ -17,6 +17,17 @@ func test_seat_view_shows_dealer_badge_only_when_dealer() -> void:
 	assert_false(v.shows_dealer_badge())
 
 
+func test_fit_font_size_keeps_size_when_text_fits() -> void:
+	assert_eq(SeatView.fit_font_size("A", 500.0, 20), 20)
+
+
+func test_fit_font_size_shrinks_long_text_to_fit() -> void:
+	var fitted: int = SeatView.fit_font_size("Cherry the Magnificent", 60.0, 40)
+	assert_lt(fitted, 40)
+	var w: float = ThemeDB.fallback_font.get_string_size("Cherry the Magnificent", HORIZONTAL_ALIGNMENT_LEFT, -1, fitted).x
+	assert_true(w <= 60.0 or fitted == SeatView.MIN_FONT_SIZE)
+
+
 func test_seat_view_remembers_name_turn_and_tricks() -> void:
 	var v: SeatView = SeatView.new()
 	add_child_autofree(v)

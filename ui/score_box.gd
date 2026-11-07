@@ -33,7 +33,11 @@ func _draw() -> void:
 		var bag_text: String = str(bags[i])
 		var w1: float = font.get_string_size(score_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var w2: float = font.get_string_size(bag_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string(font, Vector2(cx - w1 / 2.0, s.y * 0.38), score_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, colours[i])
-		draw_string(font, Vector2(cx - w2 / 2.0, s.y * 0.88), bag_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, colours[i])
-	draw_string(font, Vector2(s.x * 0.04, s.y * 0.58), "Score", HORIZONTAL_ALIGNMENT_LEFT, -1, small, Color(0.35, 0.35, 0.4))
-	draw_string(font, Vector2(s.x * 0.04, s.y * 0.99), "Bags", HORIZONTAL_ALIGNMENT_LEFT, -1, small, Color(0.35, 0.35, 0.4))
+		draw_string(font, Vector2(cx - w1 / 2.0, s.y * 0.32), score_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, colours[i])
+		draw_string(font, Vector2(cx - w2 / 2.0, s.y * 0.80), bag_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, colours[i])
+	# Labels sit centred BETWEEN the number rows, so they never touch the numbers.
+	var grey: Color = Color(0.35, 0.35, 0.4)
+	var lw1: float = font.get_string_size("Score", HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
+	var lw2: float = font.get_string_size("Bags", HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
+	draw_string(font, Vector2((s.x - lw1) / 2.0, s.y * 0.52), "Score", HORIZONTAL_ALIGNMENT_LEFT, -1, small, grey)
+	draw_string(font, Vector2((s.x - lw2) / 2.0, s.y * 0.97), "Bags", HORIZONTAL_ALIGNMENT_LEFT, -1, small, grey)
