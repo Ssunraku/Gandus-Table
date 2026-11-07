@@ -14,3 +14,6 @@ export_credentials.cfg
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local build-ledger scratch
+.superpowers/
