@@ -1,0 +1,16 @@
+# Godot generated files (rebuilt automatically, not part of our work)
+.godot/
+*.translation
+
+# Android build output and signing secrets - NEVER commit these
+android/build/
+*.apk
+*.aab
+*.keystore
+*.jks
+export_credentials.cfg
+
+# Local editor / OS files
+.vscode/
+.DS_Store
+Thumbs.db

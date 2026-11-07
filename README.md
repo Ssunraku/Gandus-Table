@@ -1,0 +1,28 @@
+# Gandus Table
+
+A mobile multiplayer card game for Android (iOS later), built with Godot 4 and GDScript.
+
+**Planned games:** Spades, 29 (Twenty-Nine).
+**Planned multiplayer:** 4 phones, one acting as host and player, over local Wi-Fi and Bluetooth.
+
+## Status
+Foundation stage. No game code yet. See `docs/PROJECT_PLAN.md` for the roadmap.
+
+## Documents
+- `CLAUDE.md` — rules for Claude Code sessions
+- `docs/PROJECT_PLAN.md` — phases and roadmap
+- `docs/ARCHITECTURE.md` — proposed technical design
+- `docs/OPEN_QUESTIONS.md` — decisions waiting for the owner
+
+## Setup checklist (as of 2026-11-07)
+| Tool | State |
+|---|---|
+| Git 2.54 | Installed |
+| VS Code 1.142 | Installed |
+| Godot 4 | Installed: 4.7.2 stable, at `D:\Downloads\ALL SETUPS\Godot_v4.7.2-stable_win64.exe` (verified) |
+| JDK (Java) | JDK 17.0.21 installed at `C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot` (verified, use this for Android); JDK 25 also present |
+| Android SDK / adb | **Not installed yet** |
+| GitHub CLI / remote | **Not set up yet** |
+| Codex CLI | **Not found yet** |
+
+Nothing is installed without the owner's approval.

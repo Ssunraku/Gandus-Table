@@ -1,0 +1,57 @@
+# Project Plan
+
+Each phase ends with something we can run and verify. Phases are proposals; order may change after owner discussion.
+
+## Phase 0 — Foundation (current)
+- Inspect environment, write docs.
+- Install Godot 4, Android tools (with approval), create Git repo + GitHub remote.
+- Create an empty Godot project; confirm it opens and runs on the PC.
+- **Done when:** empty project runs on PC and Git/GitHub work.
+
+## Phase 1 — "Hello phone"
+- Build an empty Godot app and run it on a real Android phone (USB debugging).
+- **Done when:** a trivial screen shows on the phone. Proves the toolchain end to end.
+
+## Phase 2 — Cards and table (UI only)
+- Card data model (suits, ranks), card drawing, a hand fanned on screen, tap to select, simple animations.
+- Portrait/landscape and varied screen sizes.
+- **Done when:** a dummy hand displays well on PC and phone.
+
+## Phase 3 — Spades rules engine (no UI, no network)
+- Rules written down and approved first (see OPEN_QUESTIONS).
+- Pure game logic with automated tests: deal, bid, play tricks, score.
+- **Done when:** tests pass for full simulated games with bots.
+
+## Phase 4 — Single-device playable Spades
+- UI connected to rules engine, 1 human + 3 bots.
+- **Done when:** a full game can be played offline.
+
+## Phase 5 — Network protocol + Wi-Fi transport
+- Define message set (join, deal, your-turn, play-card, state-update, etc.).
+- Host-authoritative flow; private hands only sent to their owner.
+- Wi-Fi: host discovery on local network and connection.
+- Disconnect and reconnect handling.
+- **Done when:** 4 phones play Spades over Wi-Fi.
+
+## Phase 6 — Bluetooth transport
+- Godot has no built-in Bluetooth. Needs an Android plugin written in Kotlin/Java (spike first).
+- Same protocol messages as Wi-Fi, behind the same transport interface.
+- **Done when:** 4 Android phones play over Bluetooth.
+
+## Phase 7 — Game #2: 29
+- Only after rules and variants are confirmed (OPEN_QUESTIONS).
+- Reuses table UI, protocol and transports.
+
+## Phase 8 — Settings and rule customization
+- Per-game rule options chosen by host, shared with all players.
+
+## Phase 9 — Polish and stability
+- Animations, sound, lobby UX, error messages, reconnect testing, performance, release build.
+
+## Phase 10 — iOS
+- Wi-Fi first. Bluetooth on iOS needs separate research and testing; Android↔iOS Bluetooth is not assumed to work.
+
+## Risks to tackle early
+1. Bluetooth plugin (Phase 6) is the biggest unknown; a small spike should happen before Phase 5 is finalized so the transport interface fits both.
+2. Android toolchain setup (Java version, SDK) for beginners.
+3. 29 rule variants.
