@@ -31,8 +31,9 @@ var _felt: GradientTexture2D
 
 
 func _init() -> void:
+	var skin: GameSkin = GameSkin.get_current()
 	var g: Gradient = Gradient.new()
-	g.colors = PackedColorArray([Color(0.16, 0.46, 0.22), Color(0.07, 0.27, 0.12)])
+	g.colors = PackedColorArray([skin.color("felt_center"), skin.color("felt_edge")])
 	_felt = GradientTexture2D.new()
 	_felt.gradient = g
 	_felt.fill = GradientTexture2D.FILL_RADIAL
@@ -48,19 +49,42 @@ func _init() -> void:
 	for seat in SEATS:
 		var sv: SeatView = SeatView.new()
 		add_child(sv)
-		sv.bar_color = Color(0.72, 0.85, 1.0) if seat == TableState.Seat.SOUTH or seat == TableState.Seat.NORTH else Color(1.0, 0.80, 0.80)
+		sv.bar_color = skin.color("bar_own") if seat == TableState.Seat.SOUTH or seat == TableState.Seat.NORTH else skin.color("bar_other")
 		seat_views[seat] = sv
 	score_box = ScoreBox.new()
 	add_child(score_box)
 	menu_button = Button.new()
 	menu_button.text = "Menu"
+	_style_button(menu_button, skin)
 	add_child(menu_button)
 	info_button = Button.new()
 	info_button.text = "Info"
+	_style_button(info_button, skin)
 	add_child(info_button)
 	hand = HandView.new()
 	add_child(hand)
 	hand.card_played.connect(_on_card_played)
+
+
+func _style_button(b: Button, skin: GameSkin) -> void:
+	var bg: StyleBoxFlat = StyleBoxFlat.new()
+	bg.bg_color = skin.color("button_bg")
+	bg.set_corner_radius_all(20)
+	bg.border_color = skin.color("accent")
+	bg.border_color.a = 0.55
+	bg.set_border_width_all(2)
+	var hover: StyleBoxFlat = bg.duplicate()
+	hover.bg_color = skin.color("button_bg").lightened(0.15)
+	var pressed: StyleBoxFlat = bg.duplicate()
+	pressed.bg_color = skin.color("button_bg").darkened(0.2)
+	b.add_theme_stylebox_override("normal", bg)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", pressed)
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	b.add_theme_color_override("font_color", skin.color("button_text"))
+	b.add_theme_color_override("font_hover_color", skin.color("button_text"))
+	b.add_theme_color_override("font_pressed_color", skin.color("accent"))
+	b.add_theme_font_override("font", skin.get_font())
 
 
 func _ready() -> void:

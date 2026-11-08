@@ -71,3 +71,11 @@ Exact scene/node structure, animation timing and easing, fan curve parameters, c
 - Sound set (owner to describe the sounds they like; we pick licensed equivalents).
 - Final card artwork choice (code-drawn vs a licensed set).
 - Test framework choice (see question in the message that accompanies this draft).
+
+## Addendum (2026-11-08, owner request after trying the table): skins and polish
+The owner found the code-drawn cards, logos and UI choppy, uneven and plain, and wants to swap in real images later and restyle other UI parts later.
+- **Skin system (new goal):** one `Skin` object, loaded from a folder `skins/<name>/`, supplies card images (`cards/<label>.png`, `cards/back.png`; label = the existing short name such as `AS`, `10H`), a colour palette, and an optional font. Missing images fall back to the code-drawn cards, so the game never breaks. The active skin is chosen in `skins/active.cfg`.
+- **Colours** now come from the skin (editable in `skins/classic/skin.cfg`), not from constants in code.
+- **Smoother drawing:** 2D multisample anti-aliasing turned on; hearts and spades drawn from smooth curves; textures filtered smoothly.
+- **A nicer font** is wired through the skin; the actual font file needs the owner's approval to download (source and licence recorded in `docs/ASSETS.md`).
+- **Out of scope for now:** a skin picker screen (settings phase), and image-based avatars/table/buttons (the same skin folder can hold them later).

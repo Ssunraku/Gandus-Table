@@ -34,7 +34,7 @@ func shows_dealer_badge() -> bool:
 
 ## The biggest font size (not above `start`) at which `text` fits in `max_width`.
 static func fit_font_size(text: String, max_width: float, start: int) -> int:
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = GameSkin.get_current().get_font()
 	var size_px: int = maxi(start, MIN_FONT_SIZE)
 	while size_px > MIN_FONT_SIZE:
 		if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x <= max_width:
@@ -49,10 +49,12 @@ func _draw() -> void:
 	bar.bg_color = bar_color
 	bar.set_corner_radius_all(int(s.y * 0.3))
 	if is_turn:
-		bar.border_color = Color(1.0, 0.82, 0.15)
+		bar.border_color = GameSkin.get_current().color("accent")
 		bar.set_border_width_all(maxi(2, int(s.y * 0.08)))
 	draw_style_box(bar, Rect2(Vector2.ZERO, s))
-	var font: Font = ThemeDB.fallback_font
+	var skin: GameSkin = GameSkin.get_current()
+	var font: Font = skin.get_font()
+	var text_colour: Color = skin.color("bar_text")
 	var r: float = s.y * 0.42
 	var avatar_c: Vector2 = Vector2(r + s.y * 0.1, s.y / 2.0)
 	var colour: Color = AVATAR_COLORS[absi(seat_name.hash()) % AVATAR_COLORS.size()]
@@ -66,14 +68,14 @@ func _draw() -> void:
 	var name_x: float = avatar_c.x + r + s.y * 0.15
 	var tricks_room: float = s.y * 0.9
 	var name_fs: int = fit_font_size(seat_name, s.x - name_x - tricks_room, int(s.y * 0.42))
-	draw_string(font, Vector2(name_x, s.y * 0.5 + name_fs * 0.35), seat_name, HORIZONTAL_ALIGNMENT_LEFT, -1, name_fs, Color(0.10, 0.15, 0.30))
+	draw_string(font, Vector2(name_x, s.y * 0.5 + name_fs * 0.35), seat_name, HORIZONTAL_ALIGNMENT_LEFT, -1, name_fs, text_colour)
 	var trick_fs: int = maxi(MIN_FONT_SIZE, int(s.y * 0.42))
 	var trick_text: String = "%d" % tricks
 	var tw: float = font.get_string_size(trick_text, HORIZONTAL_ALIGNMENT_LEFT, -1, trick_fs).x
-	draw_string(font, Vector2(s.x - tw - s.y * 0.3, s.y * 0.5 + trick_fs * 0.35), trick_text, HORIZONTAL_ALIGNMENT_LEFT, -1, trick_fs, Color(0.10, 0.15, 0.30))
+	draw_string(font, Vector2(s.x - tw - s.y * 0.3, s.y * 0.5 + trick_fs * 0.35), trick_text, HORIZONTAL_ALIGNMENT_LEFT, -1, trick_fs, text_colour)
 	if is_dealer:
 		var badge_c: Vector2 = avatar_c + Vector2(r * 0.9, -r * 0.8)
-		draw_circle(badge_c, s.y * 0.2, Color(0.15, 0.15, 0.18))
+		draw_circle(badge_c, s.y * 0.2, skin.color("card_black"))
 		var bfs: int = maxi(8, int(s.y * 0.3))
 		var bw: float = font.get_string_size("D", HORIZONTAL_ALIGNMENT_LEFT, -1, bfs).x
 		draw_string(font, badge_c + Vector2(-bw / 2.0, bfs * 0.35), "D", HORIZONTAL_ALIGNMENT_LEFT, -1, bfs, Color.WHITE)

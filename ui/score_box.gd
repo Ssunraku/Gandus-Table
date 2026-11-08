@@ -19,14 +19,15 @@ func show_scores(new_scores: Array[int], new_bags: Array[int]) -> void:
 func _draw() -> void:
 	var s: Vector2 = size
 	var box: StyleBoxFlat = StyleBoxFlat.new()
-	box.bg_color = Color(0.96, 0.96, 0.98)
+	var skin: GameSkin = GameSkin.get_current()
+	box.bg_color = skin.color("score_bg")
 	box.set_corner_radius_all(int(s.y * 0.12))
 	draw_style_box(box, Rect2(Vector2.ZERO, s))
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = skin.get_font()
 	var fs: int = maxi(8, int(s.y * 0.28))
 	var small: int = maxi(8, int(s.y * 0.18))
 	var col_w: float = s.x / 2.0
-	var colours: Array[Color] = [Color(0.15, 0.35, 0.75), Color(0.80, 0.25, 0.30)]
+	var colours: Array[Color] = [skin.color("score_us"), skin.color("score_them")]
 	for i in range(2):
 		var cx: float = col_w * float(i) + col_w / 2.0
 		var score_text: String = str(scores[i])
@@ -36,7 +37,7 @@ func _draw() -> void:
 		draw_string(font, Vector2(cx - w1 / 2.0, s.y * 0.32), score_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, colours[i])
 		draw_string(font, Vector2(cx - w2 / 2.0, s.y * 0.80), bag_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, colours[i])
 	# Labels sit centred BETWEEN the number rows, so they never touch the numbers.
-	var grey: Color = Color(0.35, 0.35, 0.4)
+	var grey: Color = skin.color("score_label")
 	var lw1: float = font.get_string_size("Score", HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
 	var lw2: float = font.get_string_size("Bags", HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
 	draw_string(font, Vector2((s.x - lw1) / 2.0, s.y * 0.52), "Score", HORIZONTAL_ALIGNMENT_LEFT, -1, small, grey)
