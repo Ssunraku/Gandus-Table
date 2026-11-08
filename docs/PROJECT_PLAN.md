@@ -2,7 +2,7 @@
 
 Each phase ends with something we can run and verify. Phases are proposals; order may change after owner discussion.
 
-## Phase 0 — Foundation (current)
+## Phase 0 — Foundation (DONE on PC; first run on the tablet postponed by the owner)
 - Inspect environment, write docs.
 - Install Godot 4, Android tools (with approval), create Git repo + GitHub remote.
 - Create an empty Godot project; confirm it opens and runs on the PC.
@@ -11,11 +11,16 @@ Each phase ends with something we can run and verify. Phases are proposals; orde
 ## Phase 1 — "Hello phone"
 - Build an empty Godot app and run it on a real Android phone (USB debugging).
 - **Done when:** a trivial screen shows on the phone. Proves the toolchain end to end.
+- Checklist for the first Android export: add `*.cfg` to the export preset's "Filters to export non-resource files" (skins need it, see `skins/README.md`); confirm the Nunito font and colours show on the tablet; confirm taps feel right on a touch screen.
 
-## Phase 2 — Cards and table (UI only)
+## Phase 2 — Cards and table (UI only) — DONE on PC (2026-11-08); tablet check pending
 - Card data model (suits, ranks), card drawing, a hand fanned on screen, tap to select, simple animations.
 - Portrait/landscape and varied screen sizes.
 - **Done when:** a dummy hand displays well on PC and phone.
+- Built: Card/Deck, TableState (hidden hands: opponents are only a count), TableLayout (pure maths), CardView, HandView (tap to lift, tap to play), opponent fans, name bars, score box, Table with deal and play animations.
+- Added at the owner's request: a skin system (`skins/`, see `skins/README.md`) so card pictures and colours can be swapped later without code changes, smoother drawing (anti-aliasing), a new colour palette and the Nunito font.
+- Verified: 80 automated tests, and screenshots at four screen sizes. Not yet verified: running on the tablet; sound (none yet).
+- Still to do for the look: real card artwork (owner to supply), avatars and table images as skins, sounds.
 
 ## Phase 3 — Spades rules engine (no UI, no network)
 - Rules written down and approved first (see OPEN_QUESTIONS).
