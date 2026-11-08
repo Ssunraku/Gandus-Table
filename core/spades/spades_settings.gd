@@ -8,6 +8,14 @@ var nil_enabled: bool = true
 var redeal_enabled: bool = true
 var bags_penalty_enabled: bool = true
 var play_higher_enabled: bool = false
+## "Exact bids" rule: each player is judged alone on their own number bid.
+enum ExactMode { OFF, EASY, NORMAL, HARD }
+## Turning this rule on switches the bags penalty off (bags do not exist under it).
+var exact_mode: ExactMode = ExactMode.OFF:
+	set(value):
+		exact_mode = value
+		if value != ExactMode.OFF:
+			bags_penalty_enabled = false
 var win_score: int = 500
 var lose_score: int = -200
 

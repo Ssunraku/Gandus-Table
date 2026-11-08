@@ -17,6 +17,8 @@ static func score_round(bids: Dictionary, tricks_by_seat: Dictionary, bags_befor
 	var points: Array[int] = [0, 0]
 	var bags: Array[int] = [bags_before[0], bags_before[1]]
 	var nil_results: Dictionary = {}
+	if settings.exact_mode != SpadesSettings.ExactMode.OFF:
+		return _score_exact(bids, tricks_by_seat, bags, settings)
 	for team in range(2):
 		var bid_total: int = 0
 		var has_number_bid: bool = false
@@ -47,6 +49,44 @@ static func score_round(bids: Dictionary, tricks_by_seat: Dictionary, bags_befor
 				points[team] -= BAGS_PENALTY
 				bags[team] -= BAGS_LIMIT
 	return {"points": points, "bags": bags, "nil_results": nil_results}
+
+
+## "Exact bids" rule: each number bid is judged on its own. Safe = min(tricks, bid) x 10,
+## otherwise minus = -bid x 10. Nil / Blind Nil work as usual. No bags are collected.
+## Also returns player_points {seat: int} and player_results {seat: "safe"/"minus"}.
+static func _score_exact(bids: Dictionary, tricks_by_seat: Dictionary, bags: Array[int], settings: SpadesSettings) -> Dictionary:
+	var points: Array[int] = [0, 0]
+	var nil_results: Dictionary = {}
+	var player_points: Dictionary = {}
+	var player_results: Dictionary = {}
+	for seat in range(4):
+		var b: Bid = bids[seat]
+		var won: int = int(tricks_by_seat[seat])
+		var gained: int
+		if b.is_nil_kind():
+			var value: int = settings.nil_value() if b.kind == Bid.Kind.NIL else settings.blind_nil_value()
+			var made: bool = won == 0
+			nil_results[seat] = made
+			gained = value if made else -value
+		else:
+			var safe: bool = is_safe(settings.exact_mode, b.tricks, won)
+			player_results[seat] = "safe" if safe else "minus"
+			gained = 10 * mini(won, b.tricks) if safe else -10 * b.tricks
+		player_points[seat] = gained
+		points[team_of(seat)] += gained
+	return {"points": points, "bags": [bags[0], bags[1]], "nil_results": nil_results, "player_points": player_points, "player_results": player_results}
+
+
+## Is `won` tricks safe for a bid of `bid` in this exact-bids mode?
+static func is_safe(mode: int, bid: int, won: int) -> bool:
+	match mode:
+		SpadesSettings.ExactMode.EASY:
+			return won >= bid - 1 and won <= bid + 1
+		SpadesSettings.ExactMode.NORMAL:
+			return won >= bid and won <= bid + 1
+		SpadesSettings.ExactMode.HARD:
+			return won == bid
+	return true
 
 
 ## 0 or 1 = the winning team, -1 = the game goes on.

@@ -14,6 +14,10 @@ const SCORE_STEP: int = 50
 var start_button: Button
 var back_button: Button
 
+var exact_button: Button
+
+var _exact: int = 0           # SpadesSettings.ExactMode
+var _bags_choice: bool = true # the bags setting to restore when Exact bids is turned off
 var _toggles: Dictionary = {}
 var _win: int = 500
 var _lose: int = -200
@@ -39,6 +43,13 @@ func _init() -> void:
 	_add_toggle(box, "redeal", "Redeal when a hand has no suit", defaults.redeal_enabled)
 	_add_toggle(box, "bags", "Bags penalty (−100 at 10 bags)", defaults.bags_penalty_enabled)
 	_add_toggle(box, "play_higher", "Play higher than the trick", defaults.play_higher_enabled)
+	var exact_row: HBoxContainer = _row(box, "Exact bids (own bid per player)")
+	exact_button = Button.new()
+	exact_button.custom_minimum_size = Vector2(110, 38)
+	exact_button.add_theme_font_size_override("font_size", 18)
+	exact_button.pressed.connect(_cycle_exact)
+	exact_row.add_child(exact_button)
+	_refresh_exact()
 	_win_label = _add_stepper(box, "Winning score", func(d: int) -> void: step_win(d))
 	_lose_label = _add_stepper(box, "Losing score", func(d: int) -> void: step_lose(d))
 	var row: HBoxContainer = HBoxContainer.new()
@@ -102,6 +113,29 @@ func _add_stepper(box: VBoxContainer, text: String, on_step: Callable) -> Label:
 	return value
 
 
+## Off -> Easy -> Normal -> Hard -> Off.
+func _cycle_exact() -> void:
+	_exact = (_exact + 1) % 4
+	_refresh_exact()
+
+
+## While Exact bids is on, the bags penalty is shown as Off and cannot be changed.
+## The host's earlier bags choice comes back when Exact bids goes back to Off.
+func _refresh_exact() -> void:
+	var names: Array[String] = ["Off", "Easy", "Normal", "Hard"]
+	exact_button.text = names[_exact]
+	UiStyle.style_button(exact_button, "paper_outline" if _exact == 0 else "primary")
+	var bags: Button = _toggles["bags"]
+	if _exact != 0:
+		if not bags.disabled:
+			_bags_choice = bags.button_pressed
+		bags.button_pressed = false
+		bags.disabled = true
+	elif bags.disabled:
+		bags.disabled = false
+		bags.button_pressed = _bags_choice
+
+
 func toggle(key: String) -> Button:
 	return _toggles[key]
 
@@ -129,6 +163,7 @@ func settings() -> SpadesSettings:
 	s.nil_enabled = (_toggles["nil"] as Button).button_pressed
 	s.redeal_enabled = (_toggles["redeal"] as Button).button_pressed
 	s.bags_penalty_enabled = (_toggles["bags"] as Button).button_pressed
+	s.exact_mode = _exact as SpadesSettings.ExactMode
 	s.play_higher_enabled = (_toggles["play_higher"] as Button).button_pressed
 	s.win_score = _win
 	s.lose_score = _lose

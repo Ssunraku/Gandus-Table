@@ -38,6 +38,36 @@ func test_toggling_and_stepping_changes_the_settings() -> void:
 	assert_eq(s.win_score, 550)
 
 
+func test_exact_bids_button_cycles_off_easy_normal_hard() -> void:
+	var h: HostOptionsScreen = main.host_screen
+	assert_eq(h.settings().exact_mode, SpadesSettings.ExactMode.OFF)
+	assert_eq(h.exact_button.text, "Off")
+	h.exact_button.pressed.emit()
+	assert_eq(h.settings().exact_mode, SpadesSettings.ExactMode.EASY)
+	assert_eq(h.exact_button.text, "Easy")
+	h.exact_button.pressed.emit()
+	assert_eq(h.settings().exact_mode, SpadesSettings.ExactMode.NORMAL)
+	h.exact_button.pressed.emit()
+	assert_eq(h.settings().exact_mode, SpadesSettings.ExactMode.HARD)
+	h.exact_button.pressed.emit()
+	assert_eq(h.settings().exact_mode, SpadesSettings.ExactMode.OFF)
+
+
+func test_exact_bids_switches_the_bags_penalty_off_and_locks_it() -> void:
+	var h: HostOptionsScreen = main.host_screen
+	assert_true(h.toggle("bags").button_pressed)
+	h.exact_button.pressed.emit()
+	assert_false(h.toggle("bags").button_pressed)
+	assert_true(h.toggle("bags").disabled)
+	assert_false(h.settings().bags_penalty_enabled)
+	h.exact_button.pressed.emit()
+	h.exact_button.pressed.emit()
+	h.exact_button.pressed.emit()  # back to Off
+	assert_false(h.toggle("bags").disabled)
+	assert_true(h.toggle("bags").button_pressed, "the earlier choice comes back")
+	assert_true(h.settings().bags_penalty_enabled)
+
+
 func test_steppers_stay_inside_their_bounds() -> void:
 	main.host_screen.step_win(100)
 	assert_eq(main.host_screen.settings().win_score, 1000)

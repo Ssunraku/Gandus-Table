@@ -184,6 +184,19 @@ func test_round_summary_shows_points_and_game_scores_for_both_teams() -> void:
 	assert_not_null(_button(rs, "Next round"))
 
 
+func test_round_summary_shows_each_player_result_under_exact_bids() -> void:
+	var rs: RoundSummary = RoundSummary.new()
+	add_child_autofree(rs)
+	var result: Dictionary = {"points": [10, 0], "bags": [0, 0], "nil_results": {},
+		"player_points": {0: 40, 1: 0, 2: -30, 3: 0}, "player_results": {0: "safe", 1: "safe", 2: "minus", 3: "safe"}}
+	var bids: Dictionary = {0: Bid.number(4), 1: Bid.number(1), 2: Bid.number(3), 3: Bid.number(1)}
+	rs.show_result(result, bids, {0: 4, 1: 1, 2: 5, 3: 1}, [10, 0] as Array[int], [0, 0] as Array[int], 1)
+	var text: String = _all_text(rs)
+	assert_string_contains(text, "You +40")
+	assert_string_contains(text, "Partner −30")
+	assert_false(text.contains("Bags"), "no bags row under Exact bids")
+
+
 func test_round_summary_next_button_emits_signal() -> void:
 	var rs: RoundSummary = RoundSummary.new()
 	add_child_autofree(rs)

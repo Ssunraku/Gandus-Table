@@ -58,8 +58,20 @@ func show_result(result: Dictionary, bids: Dictionary, tricks_won: Dictionary, t
 	_row(grid, "Bid", bid_cells[0], bid_cells[1])
 	_row(grid, "Tricks won", trick_cells[0], trick_cells[1])
 	_row(grid, "Nil result", nil_cells[0], nil_cells[1])
-	var bags: Array = result.get("bags", team_bags)
-	_row(grid, "Bags", "%d total" % int(bags[0]), "%d total" % int(bags[1]))
+	if result.has("player_points"):
+		# "Exact bids" rule: each player's own result instead of bags.
+		var cells: Array[String] = []
+		for team in range(2):
+			var lines: Array[String] = []
+			for seat in TEAM_SEATS[team]:
+				if (result["player_results"] as Dictionary).has(seat):
+					var p: int = int(result["player_points"][seat])
+					lines.append("%s %s" % [SpadesSession.seat_name(seat), ("+%d" % p) if p >= 0 else ("−%d" % -p)])
+			cells.append(", ".join(lines) if not lines.is_empty() else "—")
+		_row(grid, "Each player", cells[0], cells[1])
+	else:
+		var bags: Array = result.get("bags", team_bags)
+		_row(grid, "Bags", "%d total" % int(bags[0]), "%d total" % int(bags[1]))
 	var pts: Array = result.get("points", [0, 0])
 	_row(grid, "Round points", "%+d" % int(pts[0]), "%+d" % int(pts[1]))
 	_row(grid, "Game score", str(team_scores[0]), str(team_scores[1]), true)

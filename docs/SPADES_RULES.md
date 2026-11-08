@@ -63,6 +63,19 @@ owner approves this sheet.
 - **Bags penalty** (host option, default: on): reaching 10 bags costs -100 and the bag count
   drops by 10. If this option is off, only the penalty goes; the +1 per extra trick stays.
 
+### 6a. Exact bids (host option, default: off; owner-specified)
+Instead of the team bid in section 6, every player is judged alone on their own number bid B
+and the tricks T they won. Each player's result is added to the team score.
+- **Safe:** the player scores 10 x min(T, B). Extra tricks over the bid are wasted (no bags).
+- **Minus:** the player scores -10 x B.
+- Where "safe" is (example: B = 4):
+  - **Easy:** T in B-1 .. B+1 (3, 4 or 5 tricks).
+  - **Normal:** T in B .. B+1 (4 or 5 tricks).
+  - **Hard:** T = B (exactly 4 tricks).
+- Nil and Blind Nil score as before. Bags do not exist while this rule is on, so turning it on
+  switches the bags penalty off (and it cannot be changed until Exact bids is off again).
+- Bots keep their normal bidding for now (they do not play for exact tricks).
+
 ## 7. Winning
 - Default target 500 points; default losing score -200. Both are host settings.
 - The game ends when a team reaches the target or falls to the losing score. If both teams
@@ -75,7 +88,8 @@ owner approves this sheet.
 | Blind Nil | on |
 | Normal Nil | on |
 | Redeal rule | on |
-| Bags penalty | on |
+| Bags penalty | on (forced off while Exact bids is on) |
+| Exact bids (6a) | off (Easy / Normal / Hard) |
 | "Play higher" rule | off |
 | Winning score | 500 |
 | Losing score | -200 |
