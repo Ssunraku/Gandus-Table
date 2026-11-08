@@ -9,6 +9,11 @@ const LIFT_FRACTION: float = 0.15  # how far a selected card rises, as a share o
 var card: Card = null
 var face_up: bool = false
 var selected: bool = false
+## True for a card that may not be played right now: drawn with a dark wash over it.
+var dimmed: bool = false:
+	set(value):
+		dimmed = value
+		queue_redraw()
 ## 0 = resting, 1 = fully lifted. Animated by set_selected.
 var lift: float = 0.0:
 	set(value):
@@ -73,6 +78,12 @@ func _draw() -> void:
 		_draw_face(s, offset, skin)
 	else:
 		_draw_back(s, skin)
+	if dimmed:
+		var wash: StyleBoxFlat = StyleBoxFlat.new()
+		wash.bg_color = Color(0.04, 0.12, 0.09, 0.5)
+		wash.set_corner_radius_all(int(s.x * 0.09))
+		wash.anti_aliasing = true
+		draw_style_box(wash, Rect2(Vector2.ZERO, s))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

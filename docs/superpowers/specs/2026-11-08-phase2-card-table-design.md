@@ -20,7 +20,7 @@ The owner likes that site's look, UX and sounds. We take inspiration from the *e
 1. A table scene with four seats: you (bottom), partner (top), left, right.
 2. Your hand of 13 dummy cards, fanned, readable, overlapping.
 3. Opponent/partner hands shown as card backs only (a count of cards, never faces).
-4. Tap a card: it lifts. Tap again (or tap the table area): it slides to the centre of the table (a "played card" spot per seat).
+4. Tap a card: it lifts. Tap it again: it slides to the centre of the table (a "played card" spot per seat). Tapping the empty table puts a lifted card back down (decided by the owner, 2026-11-08).
 5. A deal animation (cards fly from a deck to each seat).
 6. Name bar, placeholder avatar and a dealer badge at each seat; a score box; corner buttons (menu, info) that do nothing yet.
 7. Layout adapts to **portrait and landscape** and to different screen sizes, including the Galaxy Tab S6 Lite (2000 x 1200 pixels).

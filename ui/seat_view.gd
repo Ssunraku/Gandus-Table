@@ -13,6 +13,7 @@ var seat_name: String = ""
 var is_dealer: bool = false
 var is_turn: bool = false
 var tricks: int = 0
+var bid_text: String = ""  # e.g. "bid 3", "Nil"; empty before the player has bid
 var bar_color: Color = Color(0.72, 0.85, 1.0)
 
 
@@ -20,12 +21,18 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-func setup(seat_name_value: String, dealer: bool, turn: bool, tricks_won: int) -> void:
+func setup(seat_name_value: String, dealer: bool, turn: bool, tricks_won: int, bid: String = "") -> void:
 	seat_name = seat_name_value
+	bid_text = bid
 	is_dealer = dealer
 	is_turn = turn
 	tricks = tricks_won
 	queue_redraw()
+
+
+## The text drawn next to the avatar: the name, plus the bid once there is one.
+func label_text() -> String:
+	return seat_name if bid_text == "" else "%s · %s" % [seat_name, bid_text]
 
 
 func shows_dealer_badge() -> bool:
@@ -67,8 +74,9 @@ func _draw() -> void:
 	# and shrinks to fit so the two never overlap.
 	var name_x: float = avatar_c.x + r + s.y * 0.15
 	var tricks_room: float = s.y * 0.9
-	var name_fs: int = fit_font_size(seat_name, s.x - name_x - tricks_room, int(s.y * 0.42))
-	draw_string(font, Vector2(name_x, s.y * 0.5 + name_fs * 0.35), seat_name, HORIZONTAL_ALIGNMENT_LEFT, -1, name_fs, text_colour)
+	var shown: String = label_text()
+	var name_fs: int = fit_font_size(shown, s.x - name_x - tricks_room, int(s.y * 0.42))
+	draw_string(font, Vector2(name_x, s.y * 0.5 + name_fs * 0.35), shown, HORIZONTAL_ALIGNMENT_LEFT, -1, name_fs, text_colour)
 	var trick_fs: int = maxi(MIN_FONT_SIZE, int(s.y * 0.42))
 	var trick_text: String = "%d" % tricks
 	var tw: float = font.get_string_size(trick_text, HORIZONTAL_ALIGNMENT_LEFT, -1, trick_fs).x

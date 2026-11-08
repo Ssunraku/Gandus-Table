@@ -14,6 +14,13 @@ var turn_seat: Seat = Seat.SOUTH
 var team_scores: Array[int] = [0, 0]  # [your team, other team]
 var team_bags: Array[int] = [0, 0]
 var tricks_won: Dictionary = {}  # Seat -> int
+# Extra public information for a live game (all empty/false in the dummy table).
+var bids: Dictionary = {}  # Seat -> Bid, only for seats that have bid
+var spades_broken: bool = false
+var can_play: bool = false  # it is your turn to play a card
+var legal_cards: Array[Card] = []  # the cards you may play right now
+var phase: int = 0  # a SpadesGame.Phase value
+var last_trick: Dictionary = {}  # {"cards": [{"seat","card"}], "winner": Seat}
 
 var _counts: Dictionary = {}  # Seat -> int (never SOUTH)
 var _played: Dictionary = {}  # Seat -> Card

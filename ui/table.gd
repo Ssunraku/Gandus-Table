@@ -4,6 +4,10 @@ extends Control
 ## no rules. Layout comes from TableLayout, so it adapts to any screen size.
 
 signal deal_finished
+## Live game: you tapped a card to play. The screen above decides whether it is allowed.
+signal human_played(card: Card)
+signal menu_pressed
+signal info_pressed
 
 const SEATS: Array[TableState.Seat] = [
 	TableState.Seat.SOUTH, TableState.Seat.WEST, TableState.Seat.NORTH, TableState.Seat.EAST,
@@ -14,6 +18,9 @@ const PLAY_FLIGHT: float = 0.25
 
 ## Tests turn this off so the deal animation does not start by itself.
 @export var auto_start: bool = true
+## True when a game controller owns the rules: a tap on a card is only REPORTED
+## (human_played); the table never changes the TableState itself.
+var attached: bool = false
 
 var state: TableState = null
 var hand: HandView
@@ -25,7 +32,9 @@ var seat_views: Dictionary = {}      # Seat -> SeatView
 
 var _played_views: Array[CardView] = []
 var _temp_cards: Array[CardView] = []
-var _flying: int = 0
+var _flying: Dictionary = {}  # Seat -> number of cards still in flight to that seat
+var broken_label: Label
+var last_trick_label: Label
 var _dealing: bool = false
 var _felt: GradientTexture2D
 
@@ -61,30 +70,39 @@ func _init() -> void:
 	info_button.text = "Info"
 	_style_button(info_button, skin)
 	add_child(info_button)
+	menu_button.pressed.connect(func() -> void: menu_pressed.emit())
+	info_button.pressed.connect(func() -> void: info_pressed.emit())
+	broken_label = _make_chip(skin)
+	last_trick_label = _make_chip(skin)
+	last_trick_label.get_parent().visible = false
 	hand = HandView.new()
 	add_child(hand)
 	hand.card_played.connect(_on_card_played)
 
 
-func _style_button(b: Button, skin: GameSkin) -> void:
-	var bg: StyleBoxFlat = StyleBoxFlat.new()
-	bg.bg_color = skin.color("button_bg")
-	bg.set_corner_radius_all(20)
-	bg.border_color = skin.color("accent")
-	bg.border_color.a = 0.55
-	bg.set_border_width_all(2)
-	var hover: StyleBoxFlat = bg.duplicate()
-	hover.bg_color = skin.color("button_bg").lightened(0.15)
-	var pressed: StyleBoxFlat = bg.duplicate()
-	pressed.bg_color = skin.color("button_bg").darkened(0.2)
-	b.add_theme_stylebox_override("normal", bg)
-	b.add_theme_stylebox_override("hover", hover)
-	b.add_theme_stylebox_override("pressed", pressed)
-	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	b.add_theme_color_override("font_color", skin.color("button_text"))
-	b.add_theme_color_override("font_hover_color", skin.color("button_text"))
-	b.add_theme_color_override("font_pressed_color", skin.color("accent"))
-	b.add_theme_font_override("font", skin.get_font())
+## A small dark pill with a label inside; returns the label (its parent is the pill).
+func _make_chip(skin: GameSkin) -> Label:
+	var pill: PanelContainer = PanelContainer.new()
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box: StyleBoxFlat = StyleBoxFlat.new()
+	box.bg_color = skin.color("button_bg")
+	box.set_corner_radius_all(14)
+	box.content_margin_left = 12.0
+	box.content_margin_right = 12.0
+	box.content_margin_top = 3.0
+	box.content_margin_bottom = 3.0
+	pill.add_theme_stylebox_override("panel", box)
+	var l: Label = Label.new()
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_font_override("font", skin.get_font())
+	l.add_theme_color_override("font_color", skin.color("button_text"))
+	pill.add_child(l)
+	add_child(pill)
+	return l
+
+
+func _style_button(b: Button, _skin: GameSkin) -> void:
+	UiStyle.style_button(b, "dark")
 
 
 func _ready() -> void:
@@ -129,15 +147,39 @@ func relayout() -> void:
 		var r: Rect2 = l["seat_rects"][seat]
 		sv.position = r.position
 		sv.size = r.size
-		sv.setup(state.seat_names.get(seat, ""), state.dealer_seat == seat, state.turn_seat == seat, state.tricks_won.get(seat, 0))
+		sv.setup(state.seat_names.get(seat, ""), state.dealer_seat == seat, state.turn_seat == seat, state.tricks_won.get(seat, 0), _bid_text(seat))
 	var sr: Rect2 = l["score_rect"]
 	score_box.position = sr.position
 	score_box.size = sr.size
 	score_box.show_scores(state.team_scores, state.team_bags)
+	_place_chips(l)
 	_place_button(menu_button, l["button_rect_left"])
 	_place_button(info_button, l["button_rect_right"])
 	_refresh_played(l)
 	queue_redraw()
+
+
+## "bid 3", "Nil", "Blind Nil", or "" before the seat has bid.
+func _bid_text(seat: int) -> String:
+	var b: Bid = state.bids.get(seat)
+	if b == null:
+		return ""
+	if b.kind == Bid.Kind.NUMBER:
+		return "bid %d" % b.tricks
+	return RoundSummary.bid_text(b)
+
+
+func _place_chips(l: Dictionary) -> void:
+	var btn: Rect2 = l["button_rect_left"]
+	var fs: int = maxi(10, int(btn.size.y * 0.34))
+	var y: float = btn.end.y + btn.size.y * 0.3
+	for chip_label in [broken_label, last_trick_label]:
+		chip_label.add_theme_font_size_override("font_size", fs)
+		var pill: Control = chip_label.get_parent()
+		if pill.visible:
+			pill.position = Vector2(btn.position.x, y)
+			pill.size = pill.get_combined_minimum_size()
+			y += pill.size.y + btn.size.y * 0.2
 
 
 func _place_button(b: Button, r: Rect2) -> void:
@@ -156,7 +198,7 @@ func _refresh_played(l: Dictionary) -> void:
 		var card: Card = state.get_played(seat)
 		if card == null:
 			continue
-		if seat == TableState.Seat.SOUTH and _flying > 0:
+		if _flying.get(seat, 0) > 0:
 			continue  # the card is still flying there
 		var v: CardView = CardView.new()
 		add_child(v)
@@ -166,20 +208,62 @@ func _refresh_played(l: Dictionary) -> void:
 
 
 func _on_card_played(card: Card) -> void:
+	if attached:
+		human_played.emit(card)  # the game decides; the screen redraws from the new state
+		return
 	state.play_own_card(card)
+	_fly_card(TableState.Seat.SOUTH, card)
+
+
+## Live game: draws `st` (hand, counts, bids, chips, played cards, which cards are legal).
+## To animate a card that was just played, call animate_card_played BEFORE this.
+func show_game_state(st: TableState) -> void:
+	broken_label.text = "Spades broken: %s" % ("yes" if st.spades_broken else "no")
+	var trick: Dictionary = st.last_trick
+	var has_trick: bool = not trick.is_empty()
+	last_trick_label.get_parent().visible = has_trick
+	if has_trick:
+		last_trick_label.text = "Last trick: won by %s" % st.seat_names.get(trick["winner"], "")
+	set_state(st)
+	hand.set_legal(st.legal_cards, st.can_play)
+
+
+## A face-up card flies from `seat` to its place on the table. Tell the table first, then
+## call show_game_state: the card is not drawn at its place until the flight is over.
+func animate_card_played(seat: int, card: Card) -> void:
+	_fly_card(seat, card)
+
+
+func played_view_count() -> int:
+	return _played_views.size()
+
+
+func flying_count() -> int:
+	var total: int = 0
+	for n in _flying.values():
+		total += int(n)
+	return total
+
+
+func _fly_card(seat: int, card: Card) -> void:
+	if size.x < 1.0 or size.y < 1.0:
+		return
 	var l: Dictionary = TableLayout.compute(size)
 	var card_size: Vector2 = l["card_size"]
 	var fly: CardView = CardView.new()
 	add_child(fly)
 	fly.setup(card, true, card_size)
-	fly.position = hand.last_played_rect.position - global_position
-	var target: Vector2 = l["play_spots"][TableState.Seat.SOUTH] - card_size / 2.0
-	_flying += 1
+	if seat == TableState.Seat.SOUTH:
+		fly.position = hand.last_played_rect.position - global_position
+	else:
+		fly.position = (l["opponent_fan_rects"][seat] as Rect2).get_center() - card_size / 2.0
+	var target: Vector2 = l["play_spots"][seat] - card_size / 2.0
+	_flying[seat] = int(_flying.get(seat, 0)) + 1
 	var tw: Tween = create_tween()
 	tw.tween_property(fly, "position", target, PLAY_FLIGHT).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.finished.connect(func() -> void:
 		fly.queue_free()
-		_flying -= 1
+		_flying[seat] = int(_flying.get(seat, 1)) - 1
 		relayout())
 
 

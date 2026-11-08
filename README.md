@@ -6,11 +6,13 @@ A mobile multiplayer card game for Android (iOS later), built with Godot 4 and G
 **Planned multiplayer:** 4 phones, one acting as host and player, over local Wi-Fi and Bluetooth.
 
 ## Status
-Phase 2 (the card table screen, with dummy cards and no game rules) is done on the PC. Phase 3 (the Spades rules engine, pure logic with no screen yet, plus simple bots) is built and tested: the rules are in `docs/SPADES_RULES.md`. The table screen is not yet connected to the rules, and there is no multiplayer yet. See `docs/PROJECT_PLAN.md` for the roadmap.
+You can play a full game of Spades on the PC against three simple computer players (Phase 4): start screen, host options, bidding (including Nil and Blind Nil with the card swap), play, round summary and winner screen. The rules are in `docs/SPADES_RULES.md`. Cards are still placeholder drawings and sounds are placeholder beeps. There is no multiplayer yet, and the game has not been run on the tablet yet. See `docs/PROJECT_PLAN.md` for the roadmap.
 
-## See the table
+## Play a game
 1. Open Godot 4.7.2 and import `project.godot` from this folder.
-2. Press **F5**. The table deals 13 dummy cards. Tap a card to lift it, tap it again to play it to the middle. Resize the window to try portrait and landscape.
+2. Press **F5**. Choose **Host Game**, pick your rules (or keep the defaults) and press **Start game**.
+3. Bid with the number buttons (or Nil / Blind Nil). Tap a card to lift it, tap it again to play it. Greyed-out cards cannot be played right now. **Info** shows the bids and the last trick; **Menu** pauses the game.
+4. Resize the window to try portrait and landscape.
 
 ## Run the automated tests
 In PowerShell, from this folder:

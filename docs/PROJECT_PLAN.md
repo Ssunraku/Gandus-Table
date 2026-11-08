@@ -28,9 +28,12 @@ Each phase ends with something we can run and verify. Phases are proposals; orde
 - **Done when:** tests pass for full simulated games with bots. Verified: 200 default games plus 180 games with unusual host settings, all finished with no rejected bot action; 188 tests pass in total.
 - Not covered yet: bots never bid Blind Nil, so the swap is tested by unit tests only; disconnect handling and chat belong to later phases.
 
-## Phase 4 — Single-device playable Spades
-- UI connected to rules engine, 1 human + 3 bots.
+## Phase 4 — Single-device playable Spades — BUILT and tested on PC (2026-11-08); owner play test pending
+- UI connected to rules engine, 1 human + 3 bots. Design: `docs/superpowers/specs/2026-11-08-phase4-playable-spades-design.md`; plan: `docs/superpowers/plans/2026-11-08-phase4-playable-spades.md`; screen designs in Figma (linked from the design doc).
+- Built: `SpadesSession` (host-side driver, the seam for Phase 5), `SpadesTableView`, `GameScreen` (bot pacing, panels), start / host options / settings / winner screens, bid / swap / round summary / info panels, greyed illegal cards, placeholder sounds.
 - **Done when:** a full game can be played offline.
+- Verified: 266 automated tests pass; a whole game ran to the end in the real window with the real pause timers; screenshots checked at 1280x720, 720x1280 and 800x600.
+- Not verified yet: the owner playing a game by hand, the tablet (touch feel, fonts), real card art and sounds. In portrait the panels look small (they scale with the window); polish later.
 
 ## Phase 5 — Network protocol + Wi-Fi transport
 - Define message set (join, deal, your-turn, play-card, state-update, etc.).

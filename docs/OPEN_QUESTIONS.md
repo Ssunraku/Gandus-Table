@@ -99,6 +99,10 @@ Please describe the exact version you play, or point me to a written rule source
 - One connection type per game (Wi-Fi OR Bluetooth); mixed games are not needed.
 - Chat AND quick emoji reactions are wanted.
 
+- Time limit for playing a card: none for now (owner asked on 2026-11-08, not decided). Idea for
+  Phase 5: a host option "no limit" (default) / 15 / 30 / 60 seconds; when time runs out a bot
+  plays that card. **Waiting for the owner's decision before Phase 5.**
+
 ### Original questions
 1. If a player disconnects: wait for them, replace with a bot, or let others vote?
 2. Should empty seats be fillable by bots in a game with fewer than 4 humans?

@@ -122,3 +122,82 @@ func test_reshow_hand_keeps_selected_card() -> void:
 	assert_eq(hand.get_child_count(), 13)
 	assert_eq(hand.selected_index, 5)
 	assert_eq(cards[hand.selected_index], chosen)
+
+
+# --- Phase 4: legal-card greying, face-down hand, multi-select ---
+
+func _legal_two() -> Array[Card]:
+	return [cards[0], cards[1]] as Array[Card]
+
+
+func test_illegal_card_is_dimmed_and_cannot_be_lifted() -> void:
+	hand.set_legal(_legal_two(), true)
+	assert_false((hand.get_child(0) as CardView).dimmed)
+	assert_true((hand.get_child(5) as CardView).dimmed)
+	hand.handle_tap(_point_on(5))
+	assert_eq(hand.selected_index, -1)
+
+
+func test_tapping_an_illegal_card_does_not_put_down_a_lifted_one_or_play() -> void:
+	watch_signals(hand)
+	hand.set_legal(_legal_two(), true)
+	hand.handle_tap(_point_on(0))
+	assert_eq(hand.selected_index, 0)
+	hand.handle_tap(_point_on(5))
+	hand.handle_tap(_point_on(5))
+	assert_eq(hand.selected_index, 0)
+	assert_signal_not_emitted(hand, "card_played")
+
+
+func test_legal_card_still_plays_with_two_taps() -> void:
+	watch_signals(hand)
+	hand.set_legal(_legal_two(), true)
+	hand.handle_tap(_point_on(1))
+	hand.handle_tap(_point_on(1))
+	assert_signal_emitted(hand, "card_played")
+
+
+func test_without_restriction_nothing_is_dimmed() -> void:
+	hand.set_legal(_legal_two(), true)
+	hand.set_legal([] as Array[Card], false)
+	for v in hand.get_children():
+		assert_false((v as CardView).dimmed)
+
+
+func test_face_down_hand_shows_backs_and_ignores_taps() -> void:
+	hand.set_face_down(true)
+	for v in hand.get_children():
+		assert_false((v as CardView).face_up)
+	hand.handle_tap(_point_on(3))
+	assert_eq(hand.selected_index, -1)
+	hand.set_face_down(false)
+	for v in hand.get_children():
+		assert_true((v as CardView).face_up)
+
+
+func test_multi_select_allows_up_to_max_and_never_plays() -> void:
+	hand.set_multi_select(2)
+	watch_signals(hand)
+	hand.handle_tap(_point_on(0))
+	hand.handle_tap(_point_on(4))
+	hand.handle_tap(_point_on(8))
+	assert_eq(hand.selected_cards().size(), 2)
+	assert_true(hand.selected_cards().has(cards[0]))
+	assert_true(hand.selected_cards().has(cards[4]))
+	assert_false(hand.selected_cards().has(cards[8]))
+	assert_signal_not_emitted(hand, "card_played")
+	assert_signal_emit_count(hand, "selection_changed", 2)
+
+
+func test_multi_select_tap_again_deselects() -> void:
+	hand.set_multi_select(2)
+	hand.handle_tap(_point_on(0))
+	hand.handle_tap(_point_on(0))
+	assert_eq(hand.selected_cards().size(), 0)
+
+
+func test_turning_multi_select_off_clears_the_picks() -> void:
+	hand.set_multi_select(2)
+	hand.handle_tap(_point_on(0))
+	hand.set_multi_select(0)
+	assert_eq(hand.selected_cards().size(), 0)
