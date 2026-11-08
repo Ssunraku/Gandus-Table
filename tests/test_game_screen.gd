@@ -251,3 +251,19 @@ func test_the_pause_menu_blocks_taps_on_the_table() -> void:
 		if (b as Button).text == "Resume":
 			(b as Button).pressed.emit()
 	assert_false(gs.input_blocker.visible)
+
+
+func test_a_finished_trick_is_swept_to_its_winner_when_cleared() -> void:
+	var s: SpadesSettings = SpadesSettings.new()
+	s.blind_nil_enabled = false
+	var gs: GameScreen = _screen(s, 2)
+	for i in range(400):
+		if gs.session.trick_pending():
+			break
+		assert_true(_human_step(gs))
+	assert_true(gs.session.trick_pending())
+	await wait_seconds(Table.PLAY_FLIGHT + 0.2)
+	assert_eq(gs.table.played_view_count(), 4)
+	assert_true(gs.step())
+	assert_eq(gs.table.played_view_count(), 0)
+	assert_eq(gs.table.sweeping_count(), 4)

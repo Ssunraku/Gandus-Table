@@ -15,6 +15,7 @@ const SEATS: Array[TableState.Seat] = [
 const DEAL_STAGGER: float = 0.025  # seconds between cards leaving the deck
 const DEAL_FLIGHT: float = 0.25    # seconds each card takes to arrive
 const PLAY_FLIGHT: float = 0.25
+const SWEEP_TIME: float = 0.45    # a finished trick flies to the player who won it
 
 ## Tests turn this off so the deal animation does not start by itself.
 @export var auto_start: bool = true
@@ -31,6 +32,7 @@ var opponent_views: Dictionary = {}  # Seat -> OpponentHandView
 var seat_views: Dictionary = {}      # Seat -> SeatView
 
 var _played_views: Array[CardView] = []
+var _sweeping: Array[CardView] = []
 var _temp_cards: Array[CardView] = []
 var _flying: Dictionary = {}  # Seat -> number of cards still in flight to that seat
 var broken_label: Label
@@ -173,9 +175,15 @@ func _place_chips(l: Dictionary) -> void:
 	var btn: Rect2 = l["button_rect_left"]
 	var fs: int = maxi(10, int(btn.size.y * 0.34))
 	var y: float = btn.end.y + btn.size.y * 0.3
+	# The chips must stay left of the partner's name bar, so they shrink their text to fit.
+	var max_w: float = (l["seat_rects"][TableState.Seat.NORTH] as Rect2).position.x - btn.position.x - btn.size.y * 0.3
 	for chip_label in [broken_label, last_trick_label]:
-		chip_label.add_theme_font_size_override("font_size", fs)
 		var pill: Control = chip_label.get_parent()
+		var size_px: int = fs
+		chip_label.add_theme_font_size_override("font_size", size_px)
+		while size_px > 8 and pill.get_combined_minimum_size().x > max_w:
+			size_px -= 1
+			chip_label.add_theme_font_size_override("font_size", size_px)
 		if pill.visible:
 			pill.position = Vector2(btn.position.x, y)
 			pill.size = pill.get_combined_minimum_size()
@@ -193,7 +201,7 @@ func _refresh_played(l: Dictionary) -> void:
 		remove_child(v)
 		v.free()
 	_played_views.clear()
-	var card_size: Vector2 = l["card_size"]
+	var card_size: Vector2 = l["play_card_size"]
 	for seat in SEATS:
 		var card: Card = state.get_played(seat)
 		if card == null:
@@ -249,22 +257,71 @@ func _fly_card(seat: int, card: Card) -> void:
 	if size.x < 1.0 or size.y < 1.0:
 		return
 	var l: Dictionary = TableLayout.compute(size)
-	var card_size: Vector2 = l["card_size"]
+	var hand_size: Vector2 = l["card_size"]
+	var play_size: Vector2 = l["play_card_size"]
+	var start_size: Vector2 = hand_size if seat == TableState.Seat.SOUTH else hand_size * 0.55
 	var fly: CardView = CardView.new()
 	add_child(fly)
-	fly.setup(card, true, card_size)
+	fly.setup(card, true, start_size)
+	fly.custom_minimum_size = Vector2.ZERO  # lets the card shrink while it flies
 	if seat == TableState.Seat.SOUTH:
 		fly.position = hand.last_played_rect.position - global_position
 	else:
-		fly.position = (l["opponent_fan_rects"][seat] as Rect2).get_center() - card_size / 2.0
-	var target: Vector2 = l["play_spots"][seat] - card_size / 2.0
+		fly.position = (l["opponent_fan_rects"][seat] as Rect2).get_center() - start_size / 2.0
+	var target: Vector2 = l["play_spots"][seat] - play_size / 2.0
 	_flying[seat] = int(_flying.get(seat, 0)) + 1
-	var tw: Tween = create_tween()
+	var tw: Tween = create_tween().set_parallel(true)
 	tw.tween_property(fly, "position", target, PLAY_FLIGHT).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(fly, "size", play_size, PLAY_FLIGHT)
 	tw.finished.connect(func() -> void:
 		fly.queue_free()
 		_flying[seat] = int(_flying.get(seat, 1)) - 1
 		relayout())
+
+
+## The four cards of a finished trick fly to the name bar of the player who won it,
+## shrinking and fading, so everybody sees who took them.
+func sweep_trick(winner: int) -> void:
+	if _played_views.is_empty() or size.x < 1.0 or size.y < 1.0:
+		return
+	var l: Dictionary = TableLayout.compute(size)
+	var target: Vector2 = (l["seat_rects"][winner] as Rect2).get_center()
+	var views: Array[CardView] = _played_views.duplicate()
+	_played_views.clear()  # relayout must not delete them while they fly
+	for v in views:
+		_sweeping.append(v)
+		v.custom_minimum_size = Vector2.ZERO
+		var end_size: Vector2 = v.size * 0.4
+		var tw: Tween = create_tween().set_parallel(true)
+		tw.tween_property(v, "position", target - end_size / 2.0, SWEEP_TIME).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		tw.tween_property(v, "size", end_size, SWEEP_TIME)
+		tw.tween_property(v, "modulate:a", 0.0, SWEEP_TIME * 0.4).set_delay(SWEEP_TIME * 0.6)
+		tw.finished.connect(func() -> void:
+			_sweeping.erase(v)
+			v.queue_free())
+
+
+func sweeping_count() -> int:
+	return _sweeping.size()
+
+
+## Average distance from the cards still lying on the table to `point` (for tests).
+func played_view_centre_distance_to(point: Vector2) -> float:
+	return _average_distance(_played_views, point)
+
+
+## Average distance from the cards being swept to `point` (for tests).
+func sweeping_centre_distance_to(point: Vector2) -> float:
+	return _average_distance(_sweeping, point)
+
+
+func _average_distance(views: Array[CardView], point: Vector2) -> float:
+	if views.is_empty():
+		return 0.0
+	var total: float = 0.0
+	for v in views:
+		total += (v.position + v.size / 2.0).distance_to(point)
+	return total / float(views.size())
 
 
 ## Cards fly from the middle to each seat, one at a time, round the table.

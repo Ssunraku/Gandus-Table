@@ -111,3 +111,68 @@ func test_resizing_while_a_card_flies_leaves_no_duplicate_or_orphan() -> void:
 	await wait_seconds(Table.PLAY_FLIGHT + 0.2)
 	assert_eq(table.flying_count(), 0)
 	assert_eq(table.played_view_count(), 1)
+
+
+# ---------- sweeping a finished trick to the winner ----------
+
+func _four_played_state() -> TableState:
+	var st: TableState = _state()
+	st.set_played(S, Card.make(Card.Suit.CLUBS, Card.Rank.TWO))
+	st.set_played(W, Card.make(Card.Suit.CLUBS, Card.Rank.SEVEN))
+	st.set_played(N, Card.make(Card.Suit.CLUBS, Card.Rank.TEN))
+	st.set_played(E, Card.make(Card.Suit.CLUBS, Card.Rank.KING))
+	return st
+
+
+func test_sweep_takes_the_four_cards_off_the_table_and_flies_them_to_the_winner() -> void:
+	table.show_game_state(_four_played_state())
+	assert_eq(table.played_view_count(), 4)
+	var bar: Rect2 = Rect2(table.seat_views[E].position, table.seat_views[E].size)
+	var before: float = table.played_view_centre_distance_to(bar.get_center())
+	table.sweep_trick(E)
+	assert_eq(table.played_view_count(), 0)
+	assert_eq(table.sweeping_count(), 4)
+	await wait_seconds(Table.SWEEP_TIME * 0.6)
+	var midway: float = table.sweeping_centre_distance_to(bar.get_center())
+	assert_lt(midway, before, "the cards should have moved towards the winner's name bar")
+	await wait_seconds(Table.SWEEP_TIME + 0.2)
+	assert_eq(table.sweeping_count(), 0)
+
+
+func test_sweep_with_nothing_on_the_table_does_nothing() -> void:
+	table.show_game_state(_state())
+	table.sweep_trick(W)
+	assert_eq(table.sweeping_count(), 0)
+
+
+func test_resizing_during_a_sweep_leaves_no_orphans() -> void:
+	table.show_game_state(_four_played_state())
+	table.sweep_trick(N)
+	table.show_game_state(_state())  # the game has cleared the trick, as it does in real play
+	table.size = Vector2(720, 1280)
+	table.relayout()
+	assert_eq(table.sweeping_count(), 4)
+	await wait_seconds(Table.SWEEP_TIME + 0.25)
+	assert_eq(table.sweeping_count(), 0)
+	assert_eq(table.played_view_count(), 0)
+
+
+func test_a_cleared_state_after_the_sweep_draws_no_played_cards() -> void:
+	var st: TableState = _four_played_state()
+	table.show_game_state(st)
+	table.sweep_trick(S)
+	table.show_game_state(_state())
+	assert_eq(table.played_view_count(), 0)
+	assert_eq(table.sweeping_count(), 4)
+
+
+func test_corner_chips_do_not_run_into_the_partners_bar_in_portrait() -> void:
+	table.size = Vector2(720, 1280)
+	var st: TableState = _state()
+	st.spades_broken = true
+	st.last_trick = {"cards": [] as Array[Dictionary], "winner": E}
+	table.show_game_state(st)
+	var north: Rect2 = Rect2(table.seat_views[N].position, table.seat_views[N].size)
+	for chip in [table.broken_label, table.last_trick_label]:
+		var pill: Control = chip.get_parent()
+		assert_false(Rect2(pill.position, pill.size).intersects(north), "%s overlaps the partner's bar" % chip.text)

@@ -187,6 +187,7 @@ func step() -> bool:
 	if _stopped or session == null or table.is_dealing():
 		return false
 	if session.trick_pending():
+		table.sweep_trick(session.last_trick()["winner"])  # cards fly to whoever won them
 		session.clear_trick()
 		refresh()
 		sound_event.emit("trick")

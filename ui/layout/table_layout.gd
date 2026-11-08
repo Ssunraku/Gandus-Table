@@ -43,17 +43,27 @@ static func compute(screen: Vector2) -> Dictionary:
 	var side_bar_w: float = maxf(opp_size.y, screen.x * (0.26 if portrait else 0.18))
 	var top_bar_w: float = minf(screen.x * (0.6 if portrait else 0.36), top_w)
 	var seat_rects: Dictionary = {
-		TableState.Seat.SOUTH: Rect2(m, hand_rect.position.y - bar_h - m, side_bar_w, bar_h),
+		TableState.Seat.SOUTH: Rect2((screen.x - top_bar_w) / 2.0, hand_rect.position.y - bar_h - card_h * 0.12, top_bar_w, bar_h),
 		TableState.Seat.NORTH: Rect2((screen.x - top_bar_w) / 2.0, north_fan.end.y + m, top_bar_w, bar_h),
 		TableState.Seat.WEST: Rect2(m, west_fan.position.y - m - bar_h, side_bar_w, bar_h),
 		TableState.Seat.EAST: Rect2(screen.x - m - side_bar_w, east_fan.position.y - m - bar_h, side_bar_w, bar_h),
 	}
 
+	# The middle: cards played to the table sit between the partner's name bar (top) and
+	# yours (bottom). They shrink a little if the space is tight.
+	var area_top: float = (seat_rects[TableState.Seat.NORTH] as Rect2).end.y + m
+	var area_bottom: float = (seat_rects[TableState.Seat.SOUTH] as Rect2).position.y - m
+	var play_h: float = clampf((area_bottom - area_top) / 2.1, card_h * 0.3, card_h)
+	# The side cards sit 0.9 card widths left/right of centre: keep them clear of the side name bars.
+	var side_room: float = centre.x - side_bar_w - 2.0 * m
+	play_h = minf(play_h, maxf(side_room / 1.4 / CARD_ASPECT, card_h * 0.3))
+	var play_card_size: Vector2 = Vector2(play_h * CARD_ASPECT, play_h)
+	var mid: Vector2 = Vector2(centre.x, (area_top + area_bottom) / 2.0)
 	var play_spots: Dictionary = {
-		TableState.Seat.SOUTH: centre + Vector2(0.0, card_h * 0.55),
-		TableState.Seat.NORTH: centre + Vector2(0.0, -card_h * 0.55),
-		TableState.Seat.WEST: centre + Vector2(-card_size.x * 0.9, 0.0),
-		TableState.Seat.EAST: centre + Vector2(card_size.x * 0.9, 0.0),
+		TableState.Seat.SOUTH: mid + Vector2(0.0, play_h * 0.55),
+		TableState.Seat.NORTH: mid + Vector2(0.0, -play_h * 0.55),
+		TableState.Seat.WEST: mid + Vector2(-play_card_size.x * 0.9, 0.0),
+		TableState.Seat.EAST: mid + Vector2(play_card_size.x * 0.9, 0.0),
 	}
 
 	return {
@@ -66,6 +76,7 @@ static func compute(screen: Vector2) -> Dictionary:
 			TableState.Seat.NORTH: north_fan,
 			TableState.Seat.EAST: east_fan,
 		},
+		"play_card_size": play_card_size,
 		"play_spots": play_spots,
 		"deck_spot": centre,
 		"score_rect": score_rect,

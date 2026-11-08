@@ -64,7 +64,7 @@ func test_seat_bars_do_not_overlap_opponent_fans() -> void:
 func test_seat_bars_do_not_overlap_played_cards() -> void:
 	for size in SIZES:
 		var l: Dictionary = TableLayout.compute(size)
-		var card_size: Vector2 = l["card_size"]
+		var card_size: Vector2 = l["play_card_size"]
 		for seat in SEATS:
 			for spot_seat in SEATS:
 				var spot: Vector2 = l["play_spots"][spot_seat]
@@ -97,7 +97,7 @@ func test_all_rects_inside_screen() -> void:
 func test_play_spots_inside_screen() -> void:
 	for size in SIZES:
 		var l: Dictionary = TableLayout.compute(size)
-		var card_size: Vector2 = l["card_size"]
+		var card_size: Vector2 = l["play_card_size"]
 		for seat in SEATS:
 			var spot: Vector2 = l["play_spots"][seat]
 			var r: Rect2 = Rect2(spot - card_size / 2.0, card_size)
@@ -132,3 +132,31 @@ func test_fan_overlap_leaves_rightmost_card_fully_visible() -> void:
 		var b: Vector2 = items[i]["position"]
 		assert_lt(b.x - a.x, card_size.x)
 		assert_gt(b.x - a.x, 0.0)
+
+
+func test_south_name_bar_is_centred_just_above_your_hand() -> void:
+	for size in SIZES:
+		var l: Dictionary = TableLayout.compute(size)
+		var bar: Rect2 = l["seat_rects"][TableState.Seat.SOUTH]
+		var north: Rect2 = l["seat_rects"][TableState.Seat.NORTH]
+		assert_almost_eq(bar.get_center().x, size.x / 2.0, 1.0, "centred at %s" % size)
+		assert_lte(bar.end.y, (l["hand_rect"] as Rect2).position.y, "above the hand at %s" % size)
+		assert_eq(bar.size, north.size, "same size as the partner's bar at %s" % size)
+
+
+func test_played_cards_are_clear_of_opponent_fans() -> void:
+	for size in SIZES:
+		var l: Dictionary = TableLayout.compute(size)
+		var card_size: Vector2 = l["play_card_size"]
+		for seat in SEATS:
+			var spot: Vector2 = l["play_spots"][seat]
+			var card_rect: Rect2 = Rect2(spot - card_size / 2.0, card_size)
+			for fan_seat in [TableState.Seat.WEST, TableState.Seat.NORTH, TableState.Seat.EAST]:
+				assert_false(card_rect.intersects(l["opponent_fan_rects"][fan_seat]), "card %s vs fan %s at %s" % [seat, fan_seat, size])
+
+
+func test_played_cards_are_not_bigger_than_hand_cards() -> void:
+	for size in SIZES:
+		var l: Dictionary = TableLayout.compute(size)
+		assert_lte((l["play_card_size"] as Vector2).y, (l["card_size"] as Vector2).y + 0.01)
+		assert_gt((l["play_card_size"] as Vector2).y, 20.0)

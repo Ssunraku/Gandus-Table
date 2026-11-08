@@ -37,6 +37,7 @@ func _init() -> void:
 	host_screen.start_pressed.connect(_start_game)
 	settings_screen.back_pressed.connect(func() -> void: _show(start_screen))
 	settings_screen.sound_toggled.connect(func(on: bool) -> void: sound.enabled = on)
+	settings_screen.volume_changed.connect(func(percent: float) -> void: sound.volume = percent / 100.0)
 	winner_screen.play_again_pressed.connect(func() -> void: _start_game(_last_settings))
 	winner_screen.exit_pressed.connect(func() -> void: _show(start_screen))
 	_show(start_screen)
