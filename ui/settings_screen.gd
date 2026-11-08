@@ -7,6 +7,10 @@ signal sound_toggled(on: bool)
 ## Volume as a percentage, 0 to 100.
 signal volume_changed(percent: float)
 
+## The player finished editing their name (already cleaned).
+signal name_changed(player_name: String)
+
+var name_edit: LineEdit
 var back_button: Button
 var sound_button: Button
 var volume_slider: HSlider
@@ -22,6 +26,22 @@ func _init() -> void:
 	box.add_theme_constant_override("separation", 14)
 	panel.add_child(box)
 	box.add_child(UiStyle.label("Settings", 30))
+	var name_row: HBoxContainer = HBoxContainer.new()
+	name_row.add_theme_constant_override("separation", 14)
+	var nl: Label = UiStyle.label("Your name", 20)
+	nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	nl.custom_minimum_size = Vector2(110, 0)
+	name_row.add_child(nl)
+	name_edit = LineEdit.new()
+	name_edit.max_length = PlayerProfile.MAX_LENGTH
+	name_edit.custom_minimum_size = Vector2(190, 40)
+	name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_edit.add_theme_font_size_override("font_size", 20)
+	_style_name_box(name_edit)
+	name_edit.text_submitted.connect(func(_t: String) -> void: _commit_name())
+	name_edit.focus_exited.connect(_commit_name)
+	name_row.add_child(name_edit)
+	box.add_child(name_row)
 	var row: HBoxContainer = HBoxContainer.new()
 	var l: Label = UiStyle.label("Sound", 20)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -67,8 +87,36 @@ func _init() -> void:
 	box.add_child(note)
 	back_button = add_button("Back", "paper_outline", 200, box)
 	back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	back_button.pressed.connect(func() -> void: back_pressed.emit())
+	back_button.pressed.connect(func() -> void:
+		_commit_name()
+		back_pressed.emit())
 	_style()
+
+
+## Cleans the typed name, shows the cleaned version and tells the app to save it.
+func _commit_name() -> void:
+	name_edit.text = PlayerProfile.clean(name_edit.text)
+	name_changed.emit(name_edit.text)
+
+
+## A light box with a thin outline, so the name field matches the cream settings panel.
+func _style_name_box(e: LineEdit) -> void:
+	var skin: GameSkin = GameSkin.get_current()
+	var box: StyleBoxFlat = StyleBoxFlat.new()
+	box.bg_color = Color(1.0, 0.99, 0.96)
+	box.border_color = Color(0.55, 0.53, 0.5)
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(8)
+	box.content_margin_left = 10.0
+	box.content_margin_right = 10.0
+	box.content_margin_top = 6.0
+	box.content_margin_bottom = 6.0
+	var focused: StyleBoxFlat = box.duplicate()
+	focused.border_color = skin.color("accent")
+	e.add_theme_stylebox_override("normal", box)
+	e.add_theme_stylebox_override("focus", focused)
+	e.add_theme_color_override("font_color", skin.color("bar_text"))
+	e.add_theme_color_override("caret_color", skin.color("bar_text"))
 
 
 ## Gold fill up to the handle, a soft track behind it, and a handle big enough for a finger.

@@ -10,6 +10,12 @@ var quit_enabled: bool = true
 ## Multiplies the bots' pauses (tests use 0).
 var game_pace: float = 1.0
 
+## Where the player's saved name lives. Empty = no saving and no name prompt (tests use this).
+## The real app sets it in main.tscn.
+var profile_path: String = ""
+var profile: PlayerProfile = PlayerProfile.new()
+
+var name_screen: NameScreen
 var start_screen: StartScreen
 var host_screen: HostOptionsScreen
 var settings_screen: SettingsScreen
@@ -24,12 +30,15 @@ func _init() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	sound = SoundBank.new()
 	add_child(sound)
+	name_screen = NameScreen.new()
 	start_screen = StartScreen.new()
 	host_screen = HostOptionsScreen.new()
 	settings_screen = SettingsScreen.new()
 	winner_screen = WinnerScreen.new()
-	for s in [start_screen, host_screen, settings_screen, winner_screen]:
+	for s in [name_screen, start_screen, host_screen, settings_screen, winner_screen]:
 		add_child(s)
+	name_screen.name_chosen.connect(_on_name_chosen)
+	settings_screen.name_changed.connect(_on_name_changed)
 	start_screen.host_pressed.connect(func() -> void: _show(host_screen))
 	start_screen.settings_pressed.connect(func() -> void: _show(settings_screen))
 	start_screen.exit_pressed.connect(_quit)
@@ -43,8 +52,29 @@ func _init() -> void:
 	_show(start_screen)
 
 
+func _ready() -> void:
+	if profile_path == "":
+		return
+	profile.load_from(profile_path)
+	settings_screen.name_edit.text = profile.player_name
+	if not profile.has_name():
+		_show(name_screen)  # first launch: ask who the player is
+
+
+func _on_name_chosen(player_name: String) -> void:
+	_on_name_changed(player_name)
+	_show(start_screen)
+
+
+func _on_name_changed(player_name: String) -> void:
+	profile.set_name(player_name)
+	settings_screen.name_edit.text = profile.player_name
+	if profile_path != "":
+		profile.save_to(profile_path)
+
+
 func _show(screen: Control) -> void:
-	for s in [start_screen, host_screen, settings_screen, winner_screen]:
+	for s in [name_screen, start_screen, host_screen, settings_screen, winner_screen]:
 		s.visible = s == screen
 	if game != null:
 		game.visible = screen == game
