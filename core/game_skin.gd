@@ -89,18 +89,30 @@ static func load_from_folder(path: String) -> GameSkin:
 			for key in cfg.get_section_keys("colors"):
 				skin.colors[key] = Color(str(cfg.get_value("colors", key)))
 	for rel in FONT_FILES:
-		var font_path: String = path.path_join(rel)
-		if FileAccess.file_exists(font_path):
-			var ff: FontFile = FontFile.new()
-			if ff.load_dynamic_font(font_path) == OK:
-				# Variable fonts start at their thinnest weight, so pick one (400 normal, 700 bold).
-				var variation: FontVariation = FontVariation.new()
-				variation.base_font = ff
-				var tag: int = TextServerManager.get_primary_interface().name_to_tag("wght")
-				variation.variation_opentype = {tag: weight}
-				skin.font = variation
-				break
+		var base: FontFile = _load_font_file(path.path_join(rel))
+		if base != null:
+			# Variable fonts start at their thinnest weight, so pick one (400 normal, 700 bold).
+			var variation: FontVariation = FontVariation.new()
+			variation.base_font = base
+			var tag: int = TextServerManager.get_primary_interface().name_to_tag("wght")
+			variation.variation_opentype = {tag: weight}
+			skin.font = variation
+			break
 	return skin
+
+
+## An exported (Android) game only contains fonts Godot has imported, so try the
+## import system first; read the raw file only for a font not imported yet.
+static func _load_font_file(font_path: String) -> FontFile:
+	if ResourceLoader.exists(font_path):
+		var res: Resource = load(font_path)
+		if res is FontFile:
+			return res
+	if FileAccess.file_exists(font_path):
+		var raw: FontFile = FontFile.new()
+		if raw.load_dynamic_font(font_path) == OK:
+			return raw
+	return null
 
 
 func color(key: String) -> Color:

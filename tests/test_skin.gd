@@ -105,6 +105,15 @@ func test_shipped_classic_skin_has_its_own_font() -> void:
 	assert_gt(s.get_font().get_string_size("Cherry", HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x, 10.0)
 
 
+func test_font_is_loaded_through_the_import_system_so_exports_keep_it() -> void:
+	# A font made from the raw .ttf has no resource path and would be missing
+	# from an exported (Android) build, which only contains imported data.
+	var s: GameSkin = GameSkin.load_from_folder("res://skins/classic")
+	var variation: FontVariation = s.font as FontVariation
+	assert_not_null(variation)
+	assert_eq(variation.base_font.resource_path, "res://skins/classic/fonts/font.ttf")
+
+
 func test_classic_font_is_set_to_a_bolder_weight_than_the_thin_default() -> void:
 	var s: GameSkin = GameSkin.load_from_folder("res://skins/classic")
 	var variation: FontVariation = s.font as FontVariation

@@ -71,6 +71,25 @@ func test_tap_empty_space_clears_selection() -> void:
 	assert_eq(hand.selected_index, -1)
 
 
+func test_raised_part_of_lifted_card_still_counts_as_the_hand() -> void:
+	hand.handle_tap(_point_on(6))
+	var above: Vector2 = hand.card_rect(6).position + Vector2(5, -10)
+	assert_false(Rect2(Vector2.ZERO, hand.size).has_point(above))  # outside the plain rectangle
+	assert_true(hand._has_point(above))
+
+
+func test_tapping_the_raised_part_plays_the_lifted_card() -> void:
+	hand.handle_tap(_point_on(6))
+	watch_signals(hand)
+	hand.handle_tap(hand.card_rect(6).position + Vector2(5, -10))
+	assert_signal_emitted(hand, "card_played")
+
+
+func test_a_point_far_outside_is_not_part_of_the_hand() -> void:
+	hand.handle_tap(_point_on(6))
+	assert_false(hand._has_point(Vector2(-500, -500)))
+
+
 func test_clear_selection_puts_the_card_down() -> void:
 	hand.handle_tap(_point_on(6))
 	hand.clear_selection()

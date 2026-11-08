@@ -65,6 +65,12 @@ func handle_tap(point: Vector2) -> void:
 		_select(idx)
 
 
+## Godot only sends taps that land inside this control's rectangle. A lifted card
+## sticks up above that rectangle, so count the raised strip as part of the hand too.
+func _has_point(point: Vector2) -> bool:
+	return Rect2(Vector2.ZERO, size).has_point(point) or pick_index_at(point) != -1
+
+
 func clear_selection() -> void:
 	_select(-1)
 

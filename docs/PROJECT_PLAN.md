@@ -11,6 +11,7 @@ Each phase ends with something we can run and verify. Phases are proposals; orde
 ## Phase 1 — "Hello phone"
 - Build an empty Godot app and run it on a real Android phone (USB debugging).
 - **Done when:** a trivial screen shows on the phone. Proves the toolchain end to end.
+- Checklist for the first Android export: add `*.cfg` to the export preset's "Filters to export non-resource files" (skins need it, see `skins/README.md`); confirm the Nunito font and colours show on the tablet; confirm taps feel right on a touch screen.
 
 ## Phase 2 — Cards and table (UI only) — DONE on PC (2026-11-08); tablet check pending
 - Card data model (suits, ranks), card drawing, a hand fanned on screen, tap to select, simple animations.
