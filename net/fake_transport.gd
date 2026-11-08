@@ -8,6 +8,7 @@ var is_host: bool = false
 var my_id: int = 0       # a client's own id (the host is always 1)
 var is_local: bool = false
 var connected: bool = true
+var closing_started: bool = false
 
 
 func send_to(peer_id: int, text: String) -> void:
@@ -28,6 +29,6 @@ func is_local_peer(peer_id: int) -> bool:
 func close() -> void:
 	if is_host:
 		for c in network.clients.values().duplicate():
-			network.drop(c)
+			network.drop(c, true)
 	else:
-		network.drop(self)
+		network.drop(self, true)

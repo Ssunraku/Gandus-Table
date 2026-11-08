@@ -22,6 +22,7 @@ var _phase: String = "lobby"
 var _joined: Dictionary = {}  # peer id -> {"name": String, "token": String}
 var _seq: int = 0
 var _last_trick_winner: int = -1
+var _just_dealt: bool = false  # the cards were dealt a moment ago (the table is animating the deal)
 
 
 func _init(t: Transport, game_settings: SpadesSettings, seed_value: int) -> void:
@@ -311,11 +312,31 @@ func _on_rejoin(peer: int, m: Dictionary) -> void:
 
 # ---------- the game loop (the app supplies the pauses) ----------
 
+const BOT_PAUSE: float = 0.7
+const TRICK_HOLD: float = 1.2
+const DEAL_WAIT: float = 1.8
+
+## Seconds to wait before the next step() (at pace 1), or -1.0 when nothing is due: a person
+## has to act, the game is paused, the round is over, or the game has not started / is closed.
+func next_delay() -> float:
+	if _phase != "playing" or session == null or paused:
+		return -1.0
+	if session.trick_pending():
+		return TRICK_HOLD
+	if session.round_over():
+		return -1.0
+	for seat in session.human_seats:
+		if session.must_bid(seat) or session.must_play(seat) or session.must_swap(seat):
+			return -1.0
+	return DEAL_WAIT if _just_dealt else BOT_PAUSE
+
+
 ## Does exactly one automatic thing: clear a finished trick, or let one bot act.
 ## Returns false when the game is waiting for a person (or paused, or over).
 func step() -> bool:
 	if _phase != "playing" or session == null or paused:
 		return false
+	_just_dealt = false
 	if session.trick_pending():
 		_last_trick_winner = int(session.last_trick()["winner"])
 		session.clear_trick()
@@ -367,6 +388,7 @@ func _send_lobby() -> void:
 
 
 func _send_views(event: Dictionary) -> void:
+	_just_dealt = event.get("kind") == "deal"
 	for i in range(4):
 		if seats[i]["kind"] == "human" and seats[i]["peer"] != -1:
 			_send(seats[i]["peer"], "game_view", _snapshot(i, event))

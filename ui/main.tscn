@@ -11,3 +11,5 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
 profile_path = "user://profile.cfg"
+real_network = true
+adapt_scale = true

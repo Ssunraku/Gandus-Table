@@ -14,6 +14,18 @@ func _go_to_host() -> void:
 	main.start_screen.host_button.pressed.emit()
 
 
+## Host options -> Lobby -> fill the empty seats with bots -> start: the table opens.
+func _start_hosted_game(m: Main = null) -> void:
+	var target: Main = m if m != null else main
+	target.host_screen.start_button.pressed.emit()
+	target.lobby_screen.bots_button.pressed.emit()
+	for i in range(6):
+		target.net_tick()
+	target.lobby_screen.start_button.pressed.emit()
+	for i in range(6):
+		target.net_tick()
+
+
 # ---------- host options ----------
 
 func test_default_host_options_equal_the_default_settings() -> void:
@@ -81,8 +93,8 @@ func test_steppers_stay_inside_their_bounds() -> void:
 
 # ---------- navigation ----------
 
-func test_start_screen_has_a_disabled_join_button() -> void:
-	assert_true(main.start_screen.join_button.disabled)
+func test_start_screen_has_an_enabled_join_button() -> void:
+	assert_false(main.start_screen.join_button.disabled)
 	assert_true(main.start_screen.visible)
 	assert_false(main.host_screen.visible)
 
@@ -92,12 +104,12 @@ func test_host_game_then_start_game_shows_a_started_game_with_those_settings() -
 	assert_true(main.host_screen.visible)
 	assert_false(main.start_screen.visible)
 	main.host_screen.toggle("blind_nil").button_pressed = false
-	main.host_screen.start_button.pressed.emit()
+	_start_hosted_game()
 	assert_not_null(main.game)
 	assert_true(main.game.visible)
 	assert_false(main.host_screen.visible)
 	assert_false(main.game.settings.blind_nil_enabled)
-	assert_not_null(main.game.session)
+	assert_true(main.game.source.is_online(), "every hosted game runs through the host")
 
 
 func test_settings_screen_opens_and_goes_back() -> void:
@@ -122,9 +134,8 @@ func test_exit_button_asks_to_quit() -> void:
 
 func test_leaving_a_game_and_hosting_again_gives_a_brand_new_game() -> void:
 	_go_to_host()
-	main.host_screen.start_button.pressed.emit()
+	_start_hosted_game()
 	var old: GameScreen = main.game
-	var old_session: SpadesSession = old.session
 	old.table.menu_button.pressed.emit()
 	for b in old.menu_panel.find_children("*", "Button", true, false):
 		if (b as Button).text == "Exit to start":
@@ -133,38 +144,33 @@ func test_leaving_a_game_and_hosting_again_gives_a_brand_new_game() -> void:
 	await wait_frames(3)
 	assert_false(is_instance_valid(old), "the old game screen should be gone")
 	_go_to_host()
-	main.host_screen.start_button.pressed.emit()
+	_start_hosted_game()
 	assert_not_null(main.game)
-	assert_ne(main.game.session, old_session)
+	assert_ne(main.game, old)
 
 
 # ---------- winner screen ----------
 
 func test_winner_screen_names_the_winning_side() -> void:
 	_go_to_host()
-	main.host_screen.start_button.pressed.emit()
+	_start_hosted_game()
 	main.game.game_finished.emit(0, [520, 340] as Array[int])
 	assert_true(main.winner_screen.visible)
-	assert_string_contains(main.winner_screen.title_label.text, "You and Partner win")
+	assert_string_contains(main.winner_screen.title_label.text, "You and Pip win")
 	main.winner_screen.exit_button.pressed.emit()
 	assert_true(main.start_screen.visible)
 	_go_to_host()
-	main.host_screen.start_button.pressed.emit()
+	_start_hosted_game()
 	main.game.game_finished.emit(1, [300, 510] as Array[int])
 	assert_string_contains(main.winner_screen.title_label.text, "Tin and Cherry win")
 
 
-func test_play_again_starts_a_new_game_with_the_same_settings() -> void:
+func test_play_again_is_hidden_after_a_network_game() -> void:
 	_go_to_host()
-	main.host_screen.toggle("nil").button_pressed = false
-	main.host_screen.start_button.pressed.emit()
-	var first_session: SpadesSession = main.game.session
+	_start_hosted_game()
 	main.game.game_finished.emit(0, [520, 340] as Array[int])
-	main.winner_screen.play_again_button.pressed.emit()
-	assert_true(main.game.visible)
-	assert_false(main.winner_screen.visible)
-	assert_false(main.game.settings.nil_enabled)
-	assert_ne(main.game.session, first_session)
+	assert_false(main.winner_screen.play_again_button.visible)
+	assert_true(main.winner_screen.exit_button.visible)
 
 
 # ---------- real window size ----------
@@ -178,7 +184,7 @@ func test_the_game_screen_fills_the_whole_window() -> void:
 	m.game_pace = 0.0
 	holder.add_child(m)
 	m.start_screen.host_button.pressed.emit()
-	m.host_screen.start_button.pressed.emit()
+	_start_hosted_game(m)
 	await wait_frames(2)
 	assert_eq(m.size, Vector2(1280, 720), "Main")
 	assert_eq(m.game.size, Vector2(1280, 720), "GameScreen")

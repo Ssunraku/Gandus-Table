@@ -18,6 +18,8 @@ const DEAL_WAIT: float = 1.8
 ## Multiplies every pause. 0 = no timers at all (tests drive step()).
 var pace: float = 1.0
 var session: SpadesSession
+## What the screen reads and asks. Offline it wraps `session`; online it is a RemoteSource.
+var source: GameSource
 var settings: SpadesSettings
 
 var table: Table
@@ -29,8 +31,11 @@ var info_panel: InfoPanel
 var menu_panel: PanelContainer
 var notice_panel: PanelContainer
 var notice_label: Label
+var replace_button: Button  # online, host only: give a dropped player's seat to a bot
 var input_blocker: ColorRect
 
+var _pending_deal: bool = false   # online: a new deal arrived, animate it after the redraw
+var _summary_shown_for: int = 0   # online: the round whose summary has already been shown
 var _looked: bool = false     # you have chosen to look at your cards this round
 var _bid_mode: String = ""    # "blind" or "bid": which look the bid panel currently has
 var _swap_active: bool = false
@@ -60,8 +65,20 @@ func _init() -> void:
 	notice_panel = PanelContainer.new()
 	notice_panel.add_theme_stylebox_override("panel", UiStyle.panel_box())
 	notice_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var notice_box: VBoxContainer = VBoxContainer.new()
+	notice_box.add_theme_constant_override("separation", 8)
+	notice_panel.add_child(notice_box)
 	notice_label = UiStyle.label("", 20)
-	notice_panel.add_child(notice_label)
+	notice_box.add_child(notice_label)
+	replace_button = Button.new()
+	replace_button.text = "Replace with a bot"
+	replace_button.custom_minimum_size = Vector2(240, 48)
+	replace_button.add_theme_font_size_override("font_size", 19)
+	UiStyle.style_button(replace_button, "primary")
+	replace_button.visible = false
+	replace_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	replace_button.pressed.connect(_on_replace_pressed)
+	notice_box.add_child(replace_button)
 	input_blocker = ColorRect.new()
 	input_blocker.color = Color(0, 0, 0, 0.35)
 	input_blocker.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -108,6 +125,7 @@ func start(game_settings: SpadesSettings, seed_value: int) -> void:
 	settings = game_settings
 	session = SpadesSession.new(settings, seed_value)
 	session.start()
+	source = LocalSource.new(session)
 	_new_round_state()
 	for p in [bid_panel, swap_panel, summary, info_panel, menu_panel, notice_panel, input_blocker]:
 		p.visible = false
@@ -117,9 +135,99 @@ func start(game_settings: SpadesSettings, seed_value: int) -> void:
 	_kick()
 
 
+## Starts a game that is played over the network: the host runs it and sends snapshots,
+## this screen only draws them and sends the player's choices. No timers run here.
+func start_online(src: RemoteSource) -> void:
+	_generation += 1
+	_stopped = false
+	_timer_pending = false
+	source = src
+	session = null
+	settings = src.settings()
+	_summary_shown_for = 0
+	_new_round_state()
+	for p in [bid_panel, swap_panel, summary, info_panel, menu_panel, notice_panel, input_blocker]:
+		p.visible = false
+	src.event.connect(_on_remote_event)
+	src.changed.connect(_on_remote_changed)
+	src.paused_changed.connect(_on_remote_paused)
+	src.client.rejected.connect(_on_remote_rejected)
+	refresh()
+	_announce_redeal()
+	_start_deal_animation()
+	if src.is_paused():
+		_on_remote_paused(true, "a player")
+	if src.round_over():
+		_on_remote_changed()
+
+
+func _on_remote_event(kind: String, seat: int, card: Card) -> void:
+	match kind:
+		"play":
+			table.animate_card_played(seat, card)  # before the redraw, like offline
+			sound_event.emit("play")
+		"trick":
+			table.sweep_trick(seat)  # `seat` is the trick's winner
+			sound_event.emit("trick")
+		"deal":
+			_new_round_state()
+			_pending_deal = true
+		"bid":
+			sound_event.emit("bid")
+
+
+func _on_remote_changed() -> void:
+	refresh()
+	if _pending_deal:
+		_pending_deal = false
+		_announce_redeal()
+		_start_deal_animation()
+	if source.round_over() and _summary_shown_for != source.round_number():
+		_summary_shown_for = source.round_number()
+		_show_summary()
+	elif not source.round_over():
+		summary.visible = false
+	if source.human_must_play():
+		sound_event.emit("turn")
+
+
+func _on_remote_paused(is_paused: bool, who: String) -> void:
+	if is_paused:
+		notice_label.text = "Waiting for %s to come back..." % who
+		notice_panel.visible = true
+		replace_button.visible = source is RemoteSource and (source as RemoteSource).client.is_host
+		_fit_panels()
+		_fit_panels.call_deferred()
+	else:
+		replace_button.visible = false
+		notice_panel.visible = false
+
+
+func _on_replace_pressed() -> void:
+	if source is RemoteSource:
+		var client: SpadesClient = (source as RemoteSource).client
+		client.replace_with_bot(client.paused_seat)
+
+
+## A short message in the middle of the table ("" hides it). Used for "Reconnecting...".
+func set_notice(text: String) -> void:
+	replace_button.visible = false
+	if text == "":
+		notice_panel.visible = false
+		return
+	notice_label.text = text
+	notice_panel.visible = true
+	_fit_panels()
+	_fit_panels.call_deferred()
+
+
+func _on_remote_rejected(_reason: String) -> void:
+	refresh()  # the host said no: put a lifted card back
+
+
 ## Tells the player when a hand with a missing suit forced a new deal.
 func _announce_redeal() -> void:
-	var messages: Array[String] = session.redeal_messages()
+	var messages: Array[String] = source.redeal_messages()
 	if messages.is_empty():
 		notice_panel.visible = false
 		return
@@ -149,11 +257,11 @@ func _start_deal_animation() -> void:
 
 ## Redraws everything from the session. Safe to call at any time.
 func refresh() -> void:
-	var st: TableState = SpadesTableView.build(session)
+	var st: TableState = SpadesTableView.build(source)
 	table.show_game_state(st)
-	var hide_hand: bool = settings.blind_nil_enabled and session.phase() == SpadesGame.Phase.BIDDING and not _looked
+	var hide_hand: bool = settings.blind_nil_enabled and source.phase() == SpadesGame.Phase.BIDDING and not _looked
 	table.hand.set_face_down(hide_hand)
-	if session.human_must_bid():
+	if source.human_must_bid():
 		var mode: String = "blind" if hide_hand else "bid"
 		if mode != _bid_mode:
 			_bid_mode = mode
@@ -165,7 +273,7 @@ func refresh() -> void:
 	else:
 		bid_panel.visible = false
 		_bid_mode = ""
-	var need_swap: bool = session.human_must_swap()
+	var need_swap: bool = source.human_must_swap()
 	if need_swap and not _swap_active:
 		_swap_active = true
 		table.hand.set_multi_select(2)
@@ -184,20 +292,20 @@ func refresh() -> void:
 ## Does the next automatic thing (a bot action, clearing a finished trick, showing the
 ## round summary). Returns false when it is waiting for you (or stopped).
 func step() -> bool:
-	if _stopped or session == null or table.is_dealing():
-		return false
-	if session.trick_pending():
-		table.sweep_trick(session.last_trick()["winner"])  # cards fly to whoever won them
-		session.clear_trick()
+	if _stopped or source == null or source.is_online() or table.is_dealing():
+		return false  # (online, the host runs the bots and the pauses)
+	if source.trick_pending():
+		table.sweep_trick(source.last_trick()["winner"])  # cards fly to whoever won them
+		source.clear_trick()
 		refresh()
 		sound_event.emit("trick")
 		return true
-	if session.round_over():
+	if source.round_over():
 		if summary.visible:
 			return false
 		_show_summary()
 		return true
-	var r: Dictionary = session.advance_bots()
+	var r: Dictionary = source.advance_bots()
 	if r.is_empty():
 		return false
 	if r["kind"] == "play":
@@ -206,31 +314,31 @@ func step() -> bool:
 	elif r["kind"] == "bid":
 		sound_event.emit("bid")
 	refresh()
-	if session.human_must_play():
+	if source.human_must_play():
 		sound_event.emit("turn")
 	return true
 
 
 func _show_summary() -> void:
-	var v: Dictionary = session.view()
-	summary.show_result(session.round_result(), v["bids"], v["tricks_won"], v["team_scores"], v["team_bags"], session.round_number())
-	summary.next_button.text = "See result" if session.game_over() else "Next round"
+	var v: Dictionary = source.view()
+	summary.show_result(source.round_result(), v["bids"], v["tricks_won"], v["team_scores"], v["team_bags"], source.round_number(), v["names"])
+	summary.next_button.text = "See result" if source.game_over() else "Next round"
 	summary.visible = true
 	_fit_panels()
 	_fit_panels.call_deferred()
 
 
 func _human_must_act() -> bool:
-	return session.human_must_bid() or session.human_must_swap() or session.human_must_play()
+	return source.human_must_bid() or source.human_must_swap() or source.human_must_play()
 
 
 ## Seconds (before scaling by pace) until the next automatic step, or -1 if none is due.
 func _next_delay() -> float:
 	if table.is_dealing():
 		return 0.3
-	if session.trick_pending():
+	if source.trick_pending():
 		return TRICK_HOLD
-	if session.round_over():
+	if source.round_over():
 		return -1.0 if summary.visible else SUMMARY_DELAY
 	if _human_must_act():
 		return -1.0
@@ -238,7 +346,7 @@ func _next_delay() -> float:
 
 
 func _kick() -> void:
-	if pace <= 0.0 or _stopped or _timer_pending or session == null or not is_inside_tree():
+	if pace <= 0.0 or _stopped or _timer_pending or source == null or source.is_online() or not is_inside_tree():
 		return
 	var delay: float = _next_delay()
 	if delay < 0.0:
@@ -258,7 +366,7 @@ func _kick() -> void:
 # ---------- what you do ----------
 
 func _on_bid(b: Bid) -> void:
-	if session.submit_bid(b):
+	if source.submit_bid(b):
 		_looked = true
 		sound_event.emit("bid")
 		refresh()
@@ -271,7 +379,13 @@ func _on_look() -> void:
 
 
 func _on_human_played(card: Card) -> void:
-	if session.submit_play(card):
+	if source.is_online():
+		# The host decides. The card flies when its snapshot arrives; if the host says no,
+		# _on_remote_rejected redraws the hand.
+		if not source.submit_play(card):
+			refresh()
+		return
+	if source.submit_play(card):
 		table.animate_card_played(TableState.Seat.SOUTH, card)
 		sound_event.emit("play")
 		refresh()
@@ -281,7 +395,7 @@ func _on_human_played(card: Card) -> void:
 
 
 func _on_swap(give: Array[Card], positions: Array[int]) -> void:
-	if session.submit_swap(give, positions):
+	if source.submit_swap(give, positions):
 		refresh()
 		_kick()
 	else:
@@ -290,11 +404,14 @@ func _on_swap(give: Array[Card], positions: Array[int]) -> void:
 
 func _on_next_round() -> void:
 	summary.visible = false
-	if session.game_over():
-		sound_event.emit("win" if session.winner_team() == 0 else "lose")
-		game_finished.emit(session.winner_team(), session.view()["team_scores"])
+	if source.game_over():
+		sound_event.emit("win" if source.winner_team() == 0 else "lose")
+		game_finished.emit(source.winner_team(), source.view()["team_scores"])
 		return
-	session.next_round()
+	if source.is_online():
+		source.next_round()  # the host starts the new deal and tells everyone
+		return
+	source.next_round()
 	_new_round_state()
 	refresh()
 	_announce_redeal()
@@ -325,7 +442,7 @@ func _leave() -> void:
 
 
 func _open_info() -> void:
-	var v: Dictionary = session.view()
+	var v: Dictionary = source.view()
 	info_panel.show_info(v["bids"], v["names"], v["last_trick"])
 	info_panel.visible = true
 	_fit_panels()

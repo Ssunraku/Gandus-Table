@@ -34,13 +34,16 @@ func connect_client(local: bool = false) -> FakeTransport:
 
 
 ## Simulates a lost connection: both sides are told, and nothing more is delivered.
-func drop(client: FakeTransport) -> void:
-	if client == null or not client.connected:
+## With `graceful` (a clean close) messages already waiting are still delivered first.
+func drop(client: FakeTransport, graceful: bool = false) -> void:
+	if client == null or not client.connected or client.closing_started:
 		return
-	client.connected = false
-	clients.erase(client.my_id)
-	_queue.append({"kind": "disc", "to": host_transport(), "peer": client.my_id})
-	_queue.append({"kind": "disc", "to": client, "peer": HOST_ID})
+	client.closing_started = true
+	if not graceful:
+		client.connected = false
+		clients.erase(client.my_id)
+	_queue.append({"kind": "disc", "to": host_transport(), "peer": client.my_id, "client": client})
+	_queue.append({"kind": "disc", "to": client, "peer": HOST_ID, "client": client})
 
 
 func _send(from: FakeTransport, peer_id: int, text: String) -> void:
@@ -71,6 +74,9 @@ func pump() -> int:
 			"conn":
 				to.peer_connected.emit(e["peer"])
 			"disc":
+				var gone: FakeTransport = e["client"]
+				gone.connected = false  # (a clean close only stops delivery once its goodbye is out)
+				clients.erase(gone.my_id)
 				to.peer_disconnected.emit(e["peer"])
 			"msg":
 				# a message to or from someone who has since dropped is lost

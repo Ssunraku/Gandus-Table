@@ -28,7 +28,7 @@ static func bid_text(b: Bid) -> String:
 	return str(b.tricks)
 
 
-func show_result(result: Dictionary, bids: Dictionary, tricks_won: Dictionary, team_scores: Array[int], team_bags: Array[int], round_number: int) -> void:
+func show_result(result: Dictionary, bids: Dictionary, tricks_won: Dictionary, team_scores: Array[int], team_bags: Array[int], round_number: int, names: Dictionary = {}) -> void:
 	for c in _box.get_children():
 		_box.remove_child(c)
 		c.queue_free()
@@ -51,7 +51,7 @@ func show_result(result: Dictionary, bids: Dictionary, tricks_won: Dictionary, t
 			tricks += int(tricks_won.get(seat, 0))
 			if (result.get("nil_results", {}) as Dictionary).has(seat):
 				var made: bool = result["nil_results"][seat]
-				nil_lines.append("%s %s Nil" % [SpadesSession.seat_name(seat), "made" if made else "failed"])
+				nil_lines.append("%s %s Nil" % [names.get(seat, SpadesSession.seat_name(seat)), "made" if made else "failed"])
 		bid_cells.append(" + ".join(parts))
 		trick_cells.append(str(tricks))
 		nil_cells.append(", ".join(nil_lines) if not nil_lines.is_empty() else "—")
@@ -66,7 +66,7 @@ func show_result(result: Dictionary, bids: Dictionary, tricks_won: Dictionary, t
 			for seat in TEAM_SEATS[team]:
 				if (result["player_results"] as Dictionary).has(seat):
 					var p: int = int(result["player_points"][seat])
-					lines.append("%s %s" % [SpadesSession.seat_name(seat), ("+%d" % p) if p >= 0 else ("−%d" % -p)])
+					lines.append("%s %s" % [names.get(seat, SpadesSession.seat_name(seat)), ("+%d" % p) if p >= 0 else ("−%d" % -p)])
 			cells.append(", ".join(lines) if not lines.is_empty() else "—")
 		_row(grid, "Each player", cells[0], cells[1])
 	else:

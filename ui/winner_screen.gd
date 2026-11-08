@@ -27,7 +27,8 @@ func _init() -> void:
 
 
 ## winner_team 0 = you and your partner, 1 = the other team.
-func show_result(winner_team: int, scores: Array[int], win_score: int) -> void:
-	title_label.text = "You and Partner win!" if winner_team == 0 else "Tin and Cherry win"
+## `team_names`: the two sides as text (default: the offline bots' names).
+func show_result(winner_team: int, scores: Array[int], win_score: int, team_names: Array[String] = ["You and Partner", "Tin and Cherry"]) -> void:
+	title_label.text = "%s win!" % team_names[0] if winner_team == 0 else "%s win" % team_names[1]
 	score_label.text = "Us  %d    Them  %d" % [scores[0], scores[1]]
 	target_label.text = "First to %d points" % win_score

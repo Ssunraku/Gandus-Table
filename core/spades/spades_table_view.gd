@@ -5,7 +5,7 @@ extends RefCounted
 ## cards they have already played face-up on the table.
 
 
-static func build(session: SpadesSession) -> TableState:
+static func build(session) -> TableState:  # a SpadesSession or any GameSource
 	var v: Dictionary = session.view()
 	var st: TableState = TableState.new()
 	st.own_hand = Deck.sort_hand(v["hand"])

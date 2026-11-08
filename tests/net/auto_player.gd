@@ -3,6 +3,8 @@ extends RefCounted
 ## Test helper: plays one client's seat by itself (bids 3, plays the first legal card).
 
 var client: SpadesClient
+## The host's player starts the next round by itself unless a test wants to press the button.
+var auto_next_round: bool = true
 
 
 func _init(c: SpadesClient) -> void:
@@ -23,7 +25,7 @@ func act() -> bool:
 	if v["must_play"] and not (v["legal"] as Array).is_empty():
 		client.send_play((v["legal"] as Array)[0])
 		return true
-	if v["round_over"] and not v["game_over"] and client.is_host:
+	if auto_next_round and v["round_over"] and not v["game_over"] and client.is_host:
 		client.next_round()
 		return true
 	return false

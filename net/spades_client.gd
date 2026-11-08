@@ -10,6 +10,8 @@ signal rejected(reason: String)
 signal refused(reason: String)
 signal paused_changed(is_paused: bool, who: String)
 signal closed(reason: String)
+## The connection to the host dropped (not the host ending the game on purpose).
+signal connection_lost
 
 var transport: Transport
 var token: String = ""
@@ -18,6 +20,7 @@ var my_seat: int = -1
 var is_host: bool = false
 var connected: bool = false
 var paused: bool = false
+var paused_seat: int = -1  # the seat the game is waiting for (while paused)
 var lobby: Dictionary = {}
 var view: Dictionary = {}
 var last_rejection: String = ""
@@ -26,10 +29,36 @@ var _seq: int = 0
 
 
 func _init(t: Transport) -> void:
+	_attach(t)
+
+
+func _attach(t: Transport) -> void:
 	transport = t
 	transport.message_received.connect(_on_message)
-	transport.peer_connected.connect(func(_p: int) -> void: connected = true)
-	transport.peer_disconnected.connect(func(_p: int) -> void: connected = false)
+	transport.peer_connected.connect(_on_peer_connected)
+	transport.peer_disconnected.connect(_on_peer_disconnected)
+
+
+## Moves this client (its token, its last snapshot, everything) onto a new connection,
+## for example after Wi-Fi dropped. The old connection is no longer listened to.
+func replace_transport(t: Transport) -> void:
+	if transport != null:
+		transport.message_received.disconnect(_on_message)
+		transport.peer_connected.disconnect(_on_peer_connected)
+		transport.peer_disconnected.disconnect(_on_peer_disconnected)
+	connected = false
+	_attach(t)
+
+
+func _on_peer_connected(_p: int) -> void:
+	connected = true
+
+
+func _on_peer_disconnected(_p: int) -> void:
+	var was: bool = connected
+	connected = false
+	if was:
+		connection_lost.emit()
 
 
 # ---------- requests ----------
@@ -113,6 +142,7 @@ func _on_message(_peer: int, text: String) -> void:
 			view_changed.emit()
 		"game_paused":
 			paused = true
+			paused_seat = _num(m.get("seat"), -1)
 			paused_changed.emit(true, str(m.get("name", "")))
 		"game_resumed":
 			paused = false
@@ -121,7 +151,7 @@ func _on_message(_peer: int, text: String) -> void:
 			last_rejection = str(m.get("reason", ""))
 			rejected.emit(last_rejection)
 		"game_closed":
-			connected = false
+			connected = false  # (set first so the disconnect that follows is not "lost")
 			closed.emit(str(m.get("reason", "")))
 
 
