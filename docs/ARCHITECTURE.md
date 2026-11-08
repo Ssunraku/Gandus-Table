@@ -38,19 +38,27 @@ One small contract every transport implements: start hosting, discover hosts, co
 - Reconnecting player sends `resume_request`; host re-sends that player's private hand and the current public state.
 - Host migration (host drops) postponed.
 
-## Proposed folder layout (not created yet)
+## Folder layout (as of Phase 2)
 ```
 res://
-  core/        game logic (cards, deck, rules per game) - no UI/network
-  net/         protocol + transports
-  ui/          scenes and scripts
-  games/       spades/, twentynine/
-  tests/       automated tests
+  core/        plain data and logic, no UI/network: card, deck, table_state, game_skin
+  ui/          what you see: table, hand_view, card_view, seat_view, score_box, ...
+  ui/layout/   table_layout.gd: pure maths from screen size to positions
+  skins/       looks you can swap: classic/ (colours, font, optional card pictures)
+  tests/       automated tests (GUT)
+  addons/gut/  the test framework (outside code, MIT)
+  net/         (later) protocol + transports
+  games/       (later) spades/, twentynine/ rules
 docs/
 ```
 
+## Display and skins (Phase 2)
+- `TableState` is the only thing the screen draws. It holds your real hand but only a card COUNT for every other seat, so the screen cannot show an opponent's cards. A played card is public and is stored per seat.
+- `TableLayout` turns a screen size into rectangles, so portrait, landscape and different tablets all work.
+- `GameSkin` supplies card pictures (optional), colours and the font from a folder in `skins/`. If a picture is missing the card is drawn by code. Everything visual asks the current skin; new screens must do the same so they can be re-skinned.
+
 ## Testing
-- Game logic tested with automated tests (GUT or gdUnit4 test framework for Godot — to be chosen with the owner).
+- Game logic and layout are tested with GUT (chosen and approved in Phase 2).
 - Network logic tested with a fake in-memory transport before real devices.
 
 ## Decision needed (will ask owner)
