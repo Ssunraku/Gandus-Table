@@ -6,8 +6,8 @@ extends Node
 
 const EVENTS: Array[String] = ["play"]
 const MIX_RATE: int = 22050
-const PEAK: float = 0.35  # quiet on purpose: a gentle tap, never a snap
-const BASE_DB: float = -8.0
+const PEAK: float = 0.85  # loud enough to hear clearly, still short of clipping
+const BASE_DB: float = 0.0
 
 var enabled: bool = true
 ## 0.0 (silent) to 1.0 (full). The Settings screen's slider sets this.

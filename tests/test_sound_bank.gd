@@ -41,8 +41,8 @@ func test_the_sound_is_gentle_not_harsh() -> void:
 		if i > 0 and ((prev < 0 and v > 0) or (prev > 0 and v < 0)):
 			crossings += 1
 		prev = v
-	assert_gt(loudest, 2000, "audible")
-	assert_lt(loudest, 16000, "well below full scale")
+	assert_gt(loudest, 20000, "clearly audible")
+	assert_lt(loudest, 30000, "below full scale, so it never clips")
 	assert_lt(float(crossings) / s.get_length(), 1500.0, "low and soft, no hissy noise")
 
 
