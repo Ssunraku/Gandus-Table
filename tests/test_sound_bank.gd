@@ -8,35 +8,42 @@ func before_each() -> void:
 	add_child_autofree(bank)
 
 
-func test_every_event_has_a_short_non_empty_stream() -> void:
-	for e in SoundBank.EVENTS:
-		var s: AudioStreamWAV = bank.stream_for(e)
-		assert_not_null(s, e)
-		assert_gt(s.data.size(), 0, e)
-		assert_lte(s.get_length(), 0.35, e)
-		assert_gt(s.get_length(), 0.03, e)
+func test_there_is_only_one_light_sound_for_laying_a_card() -> void:
+	assert_eq(SoundBank.EVENTS, ["play"] as Array[String])
+	var s: AudioStreamWAV = bank.stream_for("play")
+	assert_not_null(s)
+	assert_gt(s.get_length(), 0.03)
+	assert_lte(s.get_length(), 0.12, "short")
 
 
-func test_unknown_event_plays_nothing() -> void:
-	assert_false(bank.play("nope"))
+func test_other_events_stay_silent() -> void:
+	for e in ["deal", "trick", "turn", "bid", "win", "lose", "nope"]:
+		assert_false(bank.play(e), e)
 
 
-func test_known_event_plays_when_enabled() -> void:
-	assert_true(bank.play("deal"))
+func test_the_play_sound_plays_when_enabled() -> void:
+	assert_true(bank.play("play"))
 
 
 func test_nothing_plays_when_sound_is_off() -> void:
 	bank.enabled = false
-	assert_false(bank.play("deal"))
+	assert_false(bank.play("play"))
 
 
-func test_sounds_are_not_silent() -> void:
+func test_the_sound_is_gentle_not_harsh() -> void:
 	var s: AudioStreamWAV = bank.stream_for("play")
 	var loudest: int = 0
+	var crossings: int = 0
+	var prev: int = 0
 	for i in range(0, s.data.size() - 1, 2):
-		var sample: int = s.data.decode_s16(i)
-		loudest = maxi(loudest, absi(sample))
-	assert_gt(loudest, 1000)
+		var v: int = s.data.decode_s16(i)
+		loudest = maxi(loudest, absi(v))
+		if i > 0 and ((prev < 0 and v > 0) or (prev > 0 and v < 0)):
+			crossings += 1
+		prev = v
+	assert_gt(loudest, 2000, "audible")
+	assert_lt(loudest, 16000, "well below full scale")
+	assert_lt(float(crossings) / s.get_length(), 1500.0, "low and soft, no hissy noise")
 
 
 func test_main_wires_the_settings_switch_to_the_sound_bank() -> void:
@@ -59,47 +66,15 @@ func test_game_sound_events_reach_the_sound_bank() -> void:
 	main.start_screen.host_button.pressed.emit()
 	main.host_screen.start_button.pressed.emit()
 	watch_signals(main.game)
-	main.game.sound_event.emit("trick")
-	assert_signal_emitted_with_parameters(main.game, "sound_event", ["trick"])
+	main.game.sound_event.emit("play")
+	assert_signal_emitted_with_parameters(main.game, "sound_event", ["play"])
 	assert_eq(main.sound.played_count, 1)
 
 
-## Zero crossings per second: a pure beep has few, a card snap or paper swish (noise) has many.
-func _crossings_per_second(s: AudioStreamWAV) -> float:
-	var crossings: int = 0
-	var prev: int = 0
-	for i in range(0, s.data.size() - 1, 2):
-		var v: int = s.data.decode_s16(i)
-		if i > 0 and ((prev < -200 and v > 200) or (prev > 200 and v < -200)):
-			crossings += 1
-		prev = v
-	return float(crossings) / s.get_length()
-
-
-func test_card_sounds_are_noise_like_not_pure_beeps() -> void:
-	for e in ["deal", "play", "trick", "bid", "turn"]:
-		assert_gt(_crossings_per_second(bank.stream_for(e)), 1500.0, "%s should sound like cards or paper, not a beep" % e)
-
-
-func test_the_win_and_lose_jingles_stay_musical() -> void:
-	for e in ["win", "lose"]:
-		assert_lt(_crossings_per_second(bank.stream_for(e)), 2500.0, e)
-
-
-func test_sounds_are_deterministic_so_every_game_sounds_the_same() -> void:
+func test_the_sound_is_the_same_every_game() -> void:
 	var other: SoundBank = SoundBank.new()
 	add_child_autofree(other)
-	assert_eq(bank.stream_for("deal").data, other.stream_for("deal").data)
-
-
-func test_no_sound_clips_or_is_too_quiet() -> void:
-	for e in SoundBank.EVENTS:
-		var s: AudioStreamWAV = bank.stream_for(e)
-		var loudest: int = 0
-		for i in range(0, s.data.size() - 1, 2):
-			loudest = maxi(loudest, absi(s.data.decode_s16(i)))
-		assert_gt(loudest, 4000, "%s too quiet" % e)
-		assert_lt(loudest, 32000, "%s clips" % e)
+	assert_eq(bank.stream_for("play").data, other.stream_for("play").data)
 
 
 # ---------- volume ----------
@@ -127,7 +102,7 @@ func test_volume_is_kept_between_0_and_1() -> void:
 
 func test_volume_zero_plays_nothing() -> void:
 	bank.volume = 0.0
-	assert_false(bank.play("deal"))
+	assert_false(bank.play("play"))
 
 
 func test_settings_slider_changes_the_volume_in_main() -> void:
