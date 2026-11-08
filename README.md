@@ -6,7 +6,7 @@ A mobile multiplayer card game for Android (iOS later), built with Godot 4 and G
 **Planned multiplayer:** 4 phones, one acting as host and player, over local Wi-Fi and Bluetooth.
 
 ## Status
-Phase 2 (the card table screen, with dummy cards and no game rules) is done on the PC. No game rules or multiplayer yet. See `docs/PROJECT_PLAN.md` for the roadmap.
+Phase 2 (the card table screen, with dummy cards and no game rules) is done on the PC. Phase 3 (the Spades rules engine, pure logic with no screen yet, plus simple bots) is built and tested: the rules are in `docs/SPADES_RULES.md`. The table screen is not yet connected to the rules, and there is no multiplayer yet. See `docs/PROJECT_PLAN.md` for the roadmap.
 
 ## See the table
 1. Open Godot 4.7.2 and import `project.godot` from this folder.
@@ -15,7 +15,7 @@ Phase 2 (the card table screen, with dummy cards and no game rules) is done on t
 ## Run the automated tests
 In PowerShell, from this folder:
 ```
-& "D:\Downloads\ALL SETUPS\Godot_v4.7.2-stable_win64_console.exe" --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests -gexit
+& "D:\Downloads\ALL SETUPS\Godot_v4.7.2-stable_win64_console.exe" --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit
 ```
 The summary at the end should say "All tests passed!".
 

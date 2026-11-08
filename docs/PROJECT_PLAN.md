@@ -22,10 +22,11 @@ Each phase ends with something we can run and verify. Phases are proposals; orde
 - Verified: 80 automated tests, and screenshots at four screen sizes. Not yet verified: running on the tablet; sound (none yet).
 - Still to do for the look: real card artwork (owner to supply), avatars and table images as skins, sounds.
 
-## Phase 3 — Spades rules engine (no UI, no network)
-- Rules written down and approved first (see OPEN_QUESTIONS).
-- Pure game logic with automated tests: deal, bid, play tricks, score.
-- **Done when:** tests pass for full simulated games with bots.
+## Phase 3 — Spades rules engine (no UI, no network) — DONE on PC (2026-11-08)
+- Rules written down and approved first: `docs/SPADES_RULES.md`.
+- Pure game logic with automated tests: deal and redeal, bid (Nil, Blind Nil), Blind Nil card swap, play tricks, score, game end. Code in `core/spades/`, tests in `tests/spades/`.
+- **Done when:** tests pass for full simulated games with bots. Verified: 200 default games plus 180 games with unusual host settings, all finished with no rejected bot action; 188 tests pass in total.
+- Not covered yet: bots never bid Blind Nil, so the swap is tested by unit tests only; disconnect handling and chat belong to later phases.
 
 ## Phase 4 — Single-device playable Spades
 - UI connected to rules engine, 1 human + 3 bots.
