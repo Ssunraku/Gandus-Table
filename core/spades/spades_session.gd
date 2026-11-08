@@ -10,6 +10,9 @@ const NAMES: Dictionary = {0: "You", 1: "Tin", 2: "Partner", 3: "Cherry"}
 
 var settings: SpadesSettings
 var human_seat: int
+## Every seat a person controls (the network host sets several; offline it is just you).
+## Seats not listed here are played by the bots.
+var human_seats: Array[int] = []
 
 var _game: SpadesGame
 var _bot: SpadesBot
@@ -18,12 +21,14 @@ var _round: int = 0
 var _pending: bool = false  # four cards are on the table waiting to be cleared
 var _shown: Array[Dictionary] = []
 var _last_trick: Dictionary = {}
-var _swap_order: Array[int] = []  # shuffled: which real card each of your partner's face-down cards is
+var _swap_orders: Dictionary = {}  # seat -> shuffled: which real card each of the partner's face-down cards is
+var _names: Dictionary = NAMES.duplicate()
 
 
 func _init(game_settings: SpadesSettings, seed_value: int, human: int = 0) -> void:
 	settings = game_settings
 	human_seat = human
+	human_seats = [human]
 	_seed = seed_value
 	_game = SpadesGame.new(settings, posmod(seed_value, 4))
 	_bot = SpadesBot.new(seed_value)
@@ -31,6 +36,34 @@ func _init(game_settings: SpadesSettings, seed_value: int, human: int = 0) -> vo
 
 static func seat_name(seat: int) -> String:
 	return NAMES.get(seat, "")
+
+
+## Which seats are people (call before start()). The first one is the "main" human.
+func set_human_seats(seats: Array[int]) -> void:
+	human_seats = seats.duplicate()
+	human_seat = human_seats[0] if not human_seats.is_empty() else -1
+
+
+func is_human(seat: int) -> bool:
+	return human_seats.has(seat)
+
+
+## Hands a seat to a person / to the bot, even in the middle of a round.
+func make_human(seat: int) -> void:
+	if not human_seats.has(seat):
+		human_seats.append(seat)
+	if human_seat < 0:
+		human_seat = seat
+
+
+func make_bot(seat: int) -> void:
+	human_seats.erase(seat)
+	_swap_orders.erase(seat)
+
+
+## seat -> name shown at the table (default: You / Tin / Partner / Cherry).
+func set_names(names: Dictionary) -> void:
+	_names = names.duplicate()
 
 
 ## The seed for one round's first deal. A redeal adds 1 or 2 to it, so rounds are spaced
@@ -44,7 +77,7 @@ func redeal_messages() -> Array[String]:
 	var words: Dictionary = {Card.Suit.CLUBS: "clubs", Card.Suit.DIAMONDS: "diamonds", Card.Suit.HEARTS: "hearts", Card.Suit.SPADES: "spades"}
 	var out: Array[String] = []
 	for e in _game.redeal_log:
-		out.append("%s has no %s" % [seat_name(e["seat"]), words[e["suit"]]])
+		out.append("%s has no %s" % [_names.get(e["seat"], seat_name(e["seat"])), words[e["suit"]]])
 	return out
 
 
@@ -62,15 +95,27 @@ func turn_seat() -> int:
 
 
 func human_must_bid() -> bool:
-	return _game.phase == SpadesGame.Phase.BIDDING and _game.turn_seat == human_seat
+	return must_bid(human_seat)
 
 
 func human_must_play() -> bool:
-	return _game.phase == SpadesGame.Phase.PLAYING and _game.turn_seat == human_seat and not _pending
+	return must_play(human_seat)
 
 
 func human_must_swap() -> bool:
-	return _must_swap(human_seat)
+	return must_swap(human_seat)
+
+
+func must_bid(seat: int) -> bool:
+	return is_human(seat) and _game.phase == SpadesGame.Phase.BIDDING and _game.turn_seat == seat
+
+
+func must_play(seat: int) -> bool:
+	return is_human(seat) and _game.phase == SpadesGame.Phase.PLAYING and _game.turn_seat == seat and not _pending
+
+
+func must_swap(seat: int) -> bool:
+	return is_human(seat) and _must_swap(seat)
 
 
 func _must_swap(seat: int) -> bool:
@@ -81,34 +126,43 @@ func _must_swap(seat: int) -> bool:
 
 
 func submit_bid(b: Bid) -> bool:
-	if not human_must_bid():
+	return bid_for(human_seat, b)
+
+
+func bid_for(seat: int, b: Bid) -> bool:
+	if not must_bid(seat):
 		return false
-	return _game.bid(human_seat, b)
+	return _game.bid(seat, b)
 
 
 func submit_swap(give: Array[Card], positions: Array[int]) -> bool:
-	if not human_must_swap():
+	return swap_for(human_seat, give, positions)
+
+
+func swap_for(seat: int, give: Array[Card], positions: Array[int]) -> bool:
+	if not must_swap(seat):
 		return false
-	if _swap_order.is_empty():
-		_swap_order = _shuffled_positions(_game.hand_of(SpadesGame.partner_of(human_seat)).size())
+	if not _swap_orders.has(seat):
+		_swap_orders[seat] = _shuffled_positions(_game.hand_of(SpadesGame.partner_of(seat)).size(), seat)
+	var order: Array[int] = _swap_orders[seat]
 	# The positions you tap are shuffled, so "the left-most card" is not the partner's lowest.
 	var real: Array[int] = []
 	for p in positions:
-		if p < 0 or p >= _swap_order.size():
+		if p < 0 or p >= order.size():
 			return false
-		real.append(_swap_order[p])
-	var ok: bool = _game.swap(human_seat, give, real)
+		real.append(order[p])
+	var ok: bool = _game.swap(seat, give, real)
 	if ok:
-		_swap_order.clear()
+		_swap_orders.erase(seat)
 	return ok
 
 
-func _shuffled_positions(count: int) -> Array[int]:
+func _shuffled_positions(count: int, seat: int = 0) -> Array[int]:
 	var order: Array[int] = []
 	for i in range(count):
 		order.append(i)
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = _seed * 7919 + _round
+	rng.seed = _seed * 7919 + _round + seat * 101
 	for i in range(count - 1, 0, -1):
 		var j: int = rng.randi_range(0, i)
 		var tmp: int = order[i]
@@ -118,9 +172,13 @@ func _shuffled_positions(count: int) -> Array[int]:
 
 
 func submit_play(card: Card) -> bool:
-	if not human_must_play():
+	return play_for(human_seat, card)
+
+
+func play_for(seat: int, card: Card) -> bool:
+	if not must_play(seat):
 		return false
-	return _play(human_seat, card)
+	return _play(seat, card)
 
 
 ## Runs exactly one bot action. Returns {} when nothing is waiting on a bot.
@@ -130,7 +188,7 @@ func advance_bots() -> Dictionary:
 	match _game.phase:
 		SpadesGame.Phase.BIDDING:
 			var seat: int = _game.turn_seat
-			if seat == human_seat:
+			if is_human(seat):
 				return {}
 			var b: Bid = _bot.choose_bid(_game, seat)
 			if not _game.bid(seat, b):
@@ -138,14 +196,14 @@ func advance_bots() -> Dictionary:
 			return {"seat": seat, "kind": "bid", "bid": b, "card": null}
 		SpadesGame.Phase.SWAP:
 			for seat in range(4):
-				if seat != human_seat and _must_swap(seat):
+				if not is_human(seat) and _must_swap(seat):
 					var choice: Dictionary = _bot.choose_swap(_game, seat)
 					if _game.swap(seat, choice["give"], choice["positions"]):
 						return {"seat": seat, "kind": "swap", "bid": null, "card": null}
 			return {}
 		SpadesGame.Phase.PLAYING:
 			var seat: int = _game.turn_seat
-			if seat == human_seat:
+			if is_human(seat):
 				return {}
 			var card: Card = _bot.choose_card(_game, seat)
 			if not _play(seat, card):
@@ -224,18 +282,23 @@ func next_round() -> bool:
 	_round += 1
 	_shown = []
 	_last_trick = {}
-	_swap_order.clear()
+	_swap_orders.clear()
 	return _game.next_round(round_seed(_seed, _round))
 
 
 ## Everything a screen may know: the human's own hand plus public information.
 func view() -> Dictionary:
-	var v: Dictionary = _game.view_for(human_seat)
+	return view_for_seat(human_seat)
+
+
+## Same as view(), for any seat: that seat's own hand plus public information.
+func view_for_seat(seat: int) -> Dictionary:
+	var v: Dictionary = _game.view_for(seat)
 	v["trick"] = shown_trick()
 	var legal: Array[Card] = []
-	if human_must_play():
-		legal = _game.legal_cards_for(human_seat)
+	if must_play(seat):
+		legal = _game.legal_cards_for(seat)
 	v["legal"] = legal
 	v["last_trick"] = last_trick()
-	v["names"] = NAMES.duplicate()
+	v["names"] = _names.duplicate()
 	return v

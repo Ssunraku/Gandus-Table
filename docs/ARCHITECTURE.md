@@ -21,13 +21,17 @@ Why: each layer can be tested and replaced on its own. Game rules can be unit-te
 - Clients receive only: their own hand + public info (cards on the table, bids, scores, whose turn).
 - Other players' hands are never sent to a client. Even the host's UI must only display the host's own hand.
 
-## Protocol (draft idea)
+## Protocol (built in Phase 5A: see `net/protocol.gd`)
+Built as described below, with one change: the host sends each player a **full snapshot** (`game_view`) after every change instead of small updates. A snapshot holds only that player's own hand, the other seats' card counts and public facts, so it is simple, and a player who rejoins just receives the latest one. The seat of a request always comes from the connection, never from the message.
+
+## Protocol (original draft idea)
 - Messages are small dictionaries with a `type` and a `version`, serialized (e.g. JSON at first for easy debugging; can be made compact later).
 - Examples: `join_request`, `seat_assigned`, `game_start`, `hand_dealt` (private), `turn_started`, `play_card`, `action_rejected`, `state_update` (public), `player_disconnected`, `resume_request`.
 - Each message carries a sequence number so we can detect missed/duplicate messages, which matters for Bluetooth and for reconnecting.
 - The same messages are used on Wi-Fi and Bluetooth.
 
-## Transport interface (draft idea)
+## Transport interface (contract built in Phase 5A: `net/transport.gd`; only the in-memory fake exists so far)
+## Transport interface (original draft idea)
 One small contract every transport implements: start hosting, discover hosts, connect, send(to_player, message), broadcast(message), signals for connected / disconnected / message received.
 - **Wi-Fi:** Godot has built-in networking (ENet / WebSocket). Host discovery on a local network is typically done with UDP broadcast. Needs testing on real phones/routers (some guest or hotspot networks block device-to-device traffic).
 - **Bluetooth:** Godot does **not** include Bluetooth. We'd write a small Android plugin (Kotlin/Java) and expose it to GDScript. Classic Bluetooth (RFCOMM) vs Bluetooth Low Energy is an open decision; to be decided after a spike.

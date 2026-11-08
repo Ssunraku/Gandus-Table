@@ -41,6 +41,8 @@ Each phase ends with something we can run and verify. Phases are proposals; orde
 - Wi-Fi: host discovery on local network and connection.
 - Disconnect and reconnect handling.
 - **Done when:** 4 phones play Spades over Wi-Fi.
+- **5A (network core) BUILT, not yet tried on phones:** message format (`net/protocol.gd`, `net/wire.gd`), the swappable transport contract with an in-memory fake (`net/transport.gd`, `net/fake_network.gd`), the host (`net/spades_host.gd`: lobby, game, pause / rejoin / bot replacement) and the client (`net/spades_client.gd`). `SpadesSession` now supports several human seats. Whole games with 4 fake clients pass, including a drop and rejoin and a check that nobody is ever sent another player's cards. Plan: `docs/superpowers/plans/2026-11-08-phase5a-network-core.md`.
+- **5B (next):** real Wi-Fi transport, finding games (room code + nearby list), Join / Lobby / Paused screens, a username-based table, then the test on real phones. Needs the Android export set up (internet + Wi-Fi permissions).
 
 ## Phase 6 — Bluetooth transport
 - Godot has no built-in Bluetooth. Needs an Android plugin written in Kotlin/Java (spike first).
