@@ -98,6 +98,23 @@ func test_shipped_classic_skin_loads() -> void:
 	assert_ne(s.color("felt_center"), Color.MAGENTA)
 
 
+func test_shipped_classic_skin_has_its_own_font() -> void:
+	var s: GameSkin = GameSkin.load_from_folder("res://skins/classic")
+	assert_not_null(s.font)
+	assert_ne(s.get_font(), ThemeDB.fallback_font)
+	assert_gt(s.get_font().get_string_size("Cherry", HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x, 10.0)
+
+
+func test_classic_font_is_set_to_a_bolder_weight_than_the_thin_default() -> void:
+	var s: GameSkin = GameSkin.load_from_folder("res://skins/classic")
+	var variation: FontVariation = s.font as FontVariation
+	assert_not_null(variation)
+	var text: String = "Cherry Partner"
+	var thin: float = variation.base_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
+	var bold: float = variation.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
+	assert_gt(bold, thin)
+
+
 func test_card_view_uses_image_when_the_skin_has_one() -> void:
 	_write_png("cards/AS.png")
 	GameSkin.set_current(GameSkin.load_from_folder(DIR))

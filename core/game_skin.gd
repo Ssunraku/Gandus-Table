@@ -16,6 +16,7 @@ const ACTIVE_FILE: String = "res://skins/active.cfg"
 const DEFAULT_SKIN: String = "classic"
 const IMAGE_EXTENSIONS: Array[String] = ["png", "webp", "jpg", "jpeg", "svg"]
 const FONT_FILES: Array[String] = ["fonts/font.ttf", "fonts/font.otf"]
+const DEFAULT_FONT_WEIGHT: int = 700
 
 ## Built-in colours (the hex value is in the comment). skin.cfg can override any.
 const DEFAULT_COLORS: Dictionary = {
@@ -79,9 +80,11 @@ static func load_from_folder(path: String) -> GameSkin:
 	skin.folder = path
 	skin.skin_name = path.get_file()
 	skin.colors = DEFAULT_COLORS.duplicate()
+	var weight: int = DEFAULT_FONT_WEIGHT
 	var cfg: ConfigFile = ConfigFile.new()
 	if cfg.load(path.path_join("skin.cfg")) == OK:
 		skin.skin_name = str(cfg.get_value("skin", "name", skin.skin_name))
+		weight = int(cfg.get_value("font", "weight", DEFAULT_FONT_WEIGHT))
 		if cfg.has_section("colors"):
 			for key in cfg.get_section_keys("colors"):
 				skin.colors[key] = Color(str(cfg.get_value("colors", key)))
@@ -90,7 +93,12 @@ static func load_from_folder(path: String) -> GameSkin:
 		if FileAccess.file_exists(font_path):
 			var ff: FontFile = FontFile.new()
 			if ff.load_dynamic_font(font_path) == OK:
-				skin.font = ff
+				# Variable fonts start at their thinnest weight, so pick one (400 normal, 700 bold).
+				var variation: FontVariation = FontVariation.new()
+				variation.base_font = ff
+				var tag: int = TextServerManager.get_primary_interface().name_to_tag("wght")
+				variation.variation_opentype = {tag: weight}
+				skin.font = variation
 				break
 	return skin
 
