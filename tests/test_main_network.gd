@@ -43,10 +43,19 @@ func _join(m: Main) -> void:
 	_tick()
 
 
+## The host taps every free seat (a bot sits there) and the countdown starts the game.
 func _start_with_bots(host: Main) -> void:
-	host.lobby_screen.bots_button.pressed.emit()
-	_tick()
-	host.lobby_screen.start_button.pressed.emit()
+	for seat in range(1, 4):
+		if host._host.seats[seat]["kind"] == "empty":
+			host.pregame_screen.bot_add_chosen.emit(seat)
+			_tick(2)
+	_tick(10)
+
+
+## A joiner picks a free seat on the table and presses Join table.
+func _sit(m: Main, seat: int) -> void:
+	m.pregame_screen.seat_buttons[seat].pressed.emit()
+	m.pregame_screen.join_button.pressed.emit()
 	_tick()
 
 
@@ -84,40 +93,77 @@ func _play_until(done: Callable, limit: int = 30000) -> bool:
 	return done.call()
 
 
-func test_hosting_shows_the_lobby_with_a_room_code_and_the_host_seated_south() -> void:
+func test_hosting_goes_straight_to_the_table_with_the_other_seats_free() -> void:
 	var host: Main = _phone("Hosty")
 	_host(host)
-	assert_true(host.lobby_screen.visible)
+	var p: PreGameScreen = host.pregame_screen
+	assert_true(p.visible)
 	assert_true(RoomCode.is_valid(host._room_code))
-	assert_string_contains(host.lobby_screen.code_label.text, host._room_code)
-	assert_string_contains(host.lobby_screen.seat_buttons[0].text, "Hosty")
-	assert_string_contains(host.lobby_screen.seat_buttons[0].text, "(you)")
-	assert_true(host.lobby_screen.start_button.disabled, "seats are free")
+	assert_string_contains(p.code_label.text, host._room_code)
+	assert_eq(p.name_labels[0].text, "Hosty", "the host sits at the bottom with their own name")
+	assert_eq(p.avatars[0].kind, "human")
+	for seat in [1, 2, 3]:
+		assert_eq(p.avatars[seat].kind, "empty")
+		assert_eq(p.name_labels[seat].text, "Tap to add a bot")
+	assert_null(host.game, "the cards are not dealt until all four seats are taken")
 
 
-func test_a_joiner_sees_the_lobby_and_can_take_a_seat() -> void:
+func test_the_host_taps_a_free_seat_and_a_bot_sits_there_and_taps_it_again_to_remove_it() -> void:
+	var host: Main = _phone("Hosty")
+	_host(host)
+	host.pregame_screen.seat_buttons[2].pressed.emit()
+	_tick()
+	assert_eq(host._host.seats[2]["kind"], "bot")
+	assert_eq(host.pregame_screen.avatars[2].kind, "bot")
+	assert_eq(host._host.seats[1]["kind"], "empty", "one bot per tap")
+	host.pregame_screen.seat_buttons[2].pressed.emit()
+	_tick()
+	assert_eq(host._host.seats[2]["kind"], "empty")
+
+
+func test_a_joiner_sees_the_table_and_takes_a_seat() -> void:
 	var host: Main = _phone("Hosty")
 	var ann: Main = _phone("Ann")
 	_host(host)
 	_join(ann)
-	assert_true(ann.lobby_screen.visible)
-	assert_false(ann.lobby_screen.start_button.visible, "only the host can start")
-	assert_string_contains(ann.lobby_screen.seat_buttons[0].text, "Hosty")
-	assert_string_contains(ann.lobby_screen.options_label.text, "Blind Nil: off")
-	ann.lobby_screen.seat_chosen.emit(2)
-	_tick()
-	assert_string_contains(ann.lobby_screen.seat_buttons[2].text, "(you)")
-	assert_string_contains(host.lobby_screen.seat_buttons[2].text, "Ann")
+	var p: PreGameScreen = ann.pregame_screen
+	assert_true(p.visible)
+	assert_eq(p.title_label.text, "Join Hosty's game")
+	assert_true(p.join_button.visible)
+	assert_true(p.join_button.disabled, "pick a seat first")
+	assert_eq(p.name_labels[0].text, "Hosty")
+	assert_string_contains(p.options_label.text, "Blind Nil: off")
+	_sit(ann, 2)
+	assert_eq(p.name_labels[2].text, "Ann")
+	assert_false(p.join_button.visible, "now seated")
+	assert_eq(host.pregame_screen.name_labels[2].text, "Ann", "the host's table shows Ann live")
 
 
-func test_host_fills_bots_and_starts_and_everyone_sees_the_table() -> void:
+func test_a_joiner_can_move_to_another_free_seat_before_the_game_starts() -> void:
 	var host: Main = _phone("Hosty")
 	var ann: Main = _phone("Ann")
 	_host(host)
 	_join(ann)
-	ann.lobby_screen.seat_chosen.emit(2)
+	_sit(ann, 2)
+	ann.pregame_screen.seat_buttons[1].pressed.emit()
 	_tick()
-	_start_with_bots(host)
+	assert_eq(host._host.seats[1]["name"], "Ann")
+	assert_eq(host._host.seats[2]["kind"], "empty")
+
+
+func test_taking_the_last_seat_starts_a_countdown_and_then_everyone_sees_the_table() -> void:
+	var host: Main = _phone("Hosty")
+	var ann: Main = _phone("Ann")
+	_host(host)
+	_join(ann)
+	_sit(ann, 2)
+	host.pregame_screen.bot_add_chosen.emit(1)
+	_tick(2)
+	host.pregame_screen.bot_add_chosen.emit(3)
+	net.pump()
+	host.net_tick(0.0)
+	assert_string_contains(host.pregame_screen.centre_label.text, "Starting in")
+	_tick(10)
 	for m in [host, ann]:
 		assert_not_null(m.game)
 		assert_true(m.game.visible)
@@ -131,8 +177,7 @@ func test_each_phone_keeps_its_own_name_from_its_profile() -> void:
 	var ann: Main = _phone("Ann")
 	_host(host)
 	_join(ann)
-	ann.lobby_screen.seat_chosen.emit(1)
-	_tick()
+	_sit(ann, 1)
 	_start_with_bots(host)
 	var names: Dictionary = host.game.source.view()["names"]
 	assert_eq(names[0], "Hosty", "your own name, not You")
@@ -152,11 +197,15 @@ func test_joining_a_started_game_shows_a_message_not_a_stuck_screen() -> void:
 func test_a_fifth_player_is_told_the_game_is_full() -> void:
 	var host: Main = _phone("Hosty")
 	_host(host)
-	for n in ["A", "B", "C"]:
-		_join(_phone(n))
+	for i in range(3):
+		var p: Main = _phone("P%d" % i)
+		_join(p)
+		p.pregame_screen.seat_chosen.emit(i + 1)  # (the last seat starts the countdown)
+		net.pump()
 	var extra: Main = _phone("E")
 	_join(extra)
-	assert_string_contains(extra.join_screen.status_label.text, "full")
+	var text: String = extra.join_screen.status_label.text
+	assert_true(text.contains("full") or text.contains("already started"), text)
 
 
 func test_a_full_game_with_four_fake_phones_reaches_the_winner_screen() -> void:
@@ -165,10 +214,8 @@ func test_a_full_game_with_four_fake_phones_reaches_the_winner_screen() -> void:
 	for n in ["Ann", "Bo", "Cy"]:
 		_join(_phone(n))
 	for i in range(1, 4):
-		phones[i].lobby_screen.seat_chosen.emit(i)
-	_tick()
-	host.lobby_screen.start_button.pressed.emit()
-	_tick()
+		phones[i].pregame_screen.seat_chosen.emit(i)
+	_tick(10)  # the countdown starts the game by itself
 	assert_true(host.game.visible)
 	var done: Callable = func() -> bool:
 		for m in phones:
@@ -188,8 +235,7 @@ func _two_phone_game() -> Array[Main]:
 	var ann: Main = _phone("Ann")
 	_host(host)
 	_join(ann)
-	ann.lobby_screen.seat_chosen.emit(2)
-	_tick()
+	_sit(ann, 2)
 	_start_with_bots(host)
 	return [host, ann] as Array[Main]
 
@@ -277,17 +323,54 @@ func test_host_can_replace_a_dropped_player_with_a_bot_from_the_pause_notice() -
 	assert_false(host.game.notice_panel.visible)
 
 
-func test_leaving_the_lobby_as_a_joiner_frees_the_seat() -> void:
+func test_leaving_the_table_as_a_joiner_frees_the_seat() -> void:
 	var host: Main = _phone("Hosty")
 	var ann: Main = _phone("Ann")
 	_host(host)
 	_join(ann)
-	ann.lobby_screen.seat_chosen.emit(3)
-	_tick()
-	ann.lobby_screen.leave_pressed.emit()
+	_sit(ann, 3)
+	ann.pregame_screen.leave_pressed.emit()
 	_tick()
 	assert_true(ann.start_screen.visible)
-	assert_string_contains(host.lobby_screen.seat_buttons[3].text, "free")
+	assert_eq(host.pregame_screen.name_labels[3].text, "Tap to add a bot")
+
+
+func test_a_picked_seat_that_someone_else_takes_is_forgotten() -> void:
+	var host: Main = _phone("Hosty")
+	var ann: Main = _phone("Ann")
+	var bo: Main = _phone("Bo")
+	_host(host)
+	_join(ann)
+	_join(bo)
+	bo.pregame_screen.seat_buttons[2].pressed.emit()
+	assert_false(bo.pregame_screen.join_button.disabled)
+	_sit(ann, 2)
+	assert_true(bo.pregame_screen.join_button.disabled, "seat 2 is gone, pick again")
+
+
+func test_two_joiners_asking_for_the_same_seat_at_once_the_loser_gets_a_message() -> void:
+	var host: Main = _phone("Hosty")
+	var ann: Main = _phone("Ann")
+	var bo: Main = _phone("Bo")
+	_host(host)
+	_join(ann)
+	_join(bo)
+	ann.pregame_screen.seat_chosen.emit(2)  # both ask before either hears the answer
+	bo.pregame_screen.seat_chosen.emit(2)
+	_tick()
+	assert_eq(host._host.seats[2]["name"], "Ann")
+	assert_string_contains(bo.pregame_screen.notice_label.text, "taken")
+	assert_true(bo.pregame_screen.join_button.visible, "Bo can pick another seat")
+
+
+func test_a_joiner_who_never_sat_is_told_the_game_started_without_them() -> void:
+	var host: Main = _phone("Hosty")
+	var watcher: Main = _phone("Watcher")
+	_host(host)
+	_join(watcher)
+	_start_with_bots(host)
+	assert_true(watcher.join_screen.visible)
+	assert_string_contains(watcher.join_screen.status_label.text, "already started")
 
 
 func test_design_size_follows_the_window_shape() -> void:

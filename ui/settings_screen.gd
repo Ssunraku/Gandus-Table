@@ -156,4 +156,4 @@ static func _round_knob(diameter: int, colour: Color) -> ImageTexture:
 
 func _style() -> void:
 	sound_button.text = "On" if sound_button.button_pressed else "Off"
-	UiStyle.style_button(sound_button, "primary" if sound_button.button_pressed else "off")
+	UiStyle.style_button(sound_button, "primary" if sound_button.button_pressed else "paper_outline")

@@ -3,27 +3,46 @@ extends RefCounted
 ## Shared look for buttons, panels and labels so every screen matches the skin.
 
 
-## Every button is gold (the "Host Game" look) and turns a darker gold while pressed.
-## kind: "dark", "primary", "paper_outline" are all the same gold pill; "number" is the same
-## gold in a round shape; "off" is a muted sand colour for the Off side of On/Off switches,
-## so a switch's state can still be seen.
+## kind: "dark" (default pill), "primary" (gold), "paper_outline" (for cream panels),
+## "number" (round bid button), "gold" (the all-gold pill used by the Join, Settings, Exit,
+## Exit to start, Resume, Menu and Info buttons; darker gold while pressed).
 static func style_button(b: Button, kind: String = "dark") -> void:
 	var skin: GameSkin = GameSkin.get_current()
 	var bg: StyleBoxFlat = StyleBoxFlat.new()
-	var text_colour: Color = skin.color("bar_text")
+	var text_colour: Color = skin.color("button_text")
+	var pressed_text: Color = skin.color("accent")
 	bg.set_corner_radius_all(20)
 	bg.anti_aliasing = true
-	bg.bg_color = skin.color("accent")
 	match kind:
+		"gold":
+			bg.bg_color = skin.color("accent")
+			text_colour = skin.color("bar_text")
+			pressed_text = skin.color("bar_text")
+		"primary":
+			bg.bg_color = skin.color("accent")
+			text_colour = skin.color("bar_text")
+			pressed_text = skin.color("bar_text")
+		"paper_outline":
+			bg.bg_color = Color(0, 0, 0, 0)
+			bg.border_color = skin.color("bar_text")
+			bg.border_color.a = 0.6
+			bg.set_border_width_all(2)
+			text_colour = skin.color("bar_text")
+			pressed_text = skin.color("bar_text")
 		"number":
+			bg.bg_color = Color(0.90, 0.88, 0.82)
 			bg.set_corner_radius_all(100)
-		"off":
-			bg.bg_color = Color(0.84, 0.80, 0.68)
-	var pressed_text: Color = text_colour
+			text_colour = skin.color("bar_text")
+			pressed_text = skin.color("bar_text")
+		_:
+			bg.bg_color = skin.color("button_bg")
+			bg.border_color = skin.color("accent")
+			bg.border_color.a = 0.55
+			bg.set_border_width_all(2)
 	var hover: StyleBoxFlat = bg.duplicate()
-	hover.bg_color = bg.bg_color.lightened(0.12)
+	hover.bg_color = bg.bg_color.lightened(0.15) if bg.bg_color.a > 0.0 else Color(0, 0, 0, 0.06)
 	var pressed: StyleBoxFlat = bg.duplicate()
-	pressed.bg_color = bg.bg_color.darkened(0.28)
+	pressed.bg_color = bg.bg_color.darkened(0.2) if bg.bg_color.a > 0.0 else Color(0, 0, 0, 0.12)
 	var off: StyleBoxFlat = bg.duplicate()
 	off.bg_color = Color(bg.bg_color.r, bg.bg_color.g, bg.bg_color.b, bg.bg_color.a * 0.45)
 	b.add_theme_stylebox_override("normal", bg)

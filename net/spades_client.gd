@@ -79,12 +79,12 @@ func leave() -> void:
 	_send("leave")
 
 
-func add_bots() -> void:
-	_send("add_bots")
+func add_bot(seat: int) -> void:
+	_send("add_bot", {"seat": seat})
 
 
-func start_game() -> void:
-	_send("start_game")
+func remove_bot(seat: int) -> void:
+	_send("remove_bot", {"seat": seat})
 
 
 func send_bid(b: Bid) -> void:

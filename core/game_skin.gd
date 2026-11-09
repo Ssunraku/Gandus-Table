@@ -29,8 +29,8 @@ const DEFAULT_COLORS: Dictionary = {
 	"back_base": Color(0.106, 0.184, 0.420),     # #1B2F6B
 	"back_pattern": Color(0.890, 0.757, 0.435),  # #E3C16F
 	"back_frame": Color(0.984, 0.973, 0.945),    # #FBF8F1
-	"bar_own": Color(0.812, 0.886, 0.980),       # #CFE2FA
-	"bar_other": Color(0.980, 0.827, 0.812),     # #FAD3CF
+	"bar_own": Color(0.980, 0.827, 0.812),       # #FAD3CF (your team: red)
+	"bar_other": Color(0.812, 0.886, 0.980),     # #CFE2FA (opponents: blue)
 	"bar_text": Color(0.106, 0.133, 0.251),      # #1B2240
 	"accent": Color(0.949, 0.757, 0.306),        # #F2C14E
 	"button_bg": Color(0.059, 0.165, 0.129, 0.85),  # #0F2A21

@@ -54,18 +54,46 @@ func _normal_colour(b: Button) -> Color:
 	return (b.get_theme_stylebox("normal") as StyleBoxFlat).bg_color
 
 
-func test_every_button_kind_is_the_host_game_gold() -> void:
+func test_the_gold_kind_is_the_accent_colour() -> void:
+	var b: Button = Button.new()
+	UiStyle.style_button(b, "gold")
+	assert_eq(_normal_colour(b), GameSkin.get_current().color("accent"))
+	b.free()
+
+
+func test_other_button_kinds_keep_their_old_look() -> void:
+	var skin: GameSkin = GameSkin.get_current()
+	var dark: Button = Button.new()
+	UiStyle.style_button(dark, "dark")
+	assert_eq(_normal_colour(dark), skin.color("button_bg"))
+	var outline: Button = Button.new()
+	UiStyle.style_button(outline, "paper_outline")
+	assert_eq(_normal_colour(outline).a, 0.0)
+	var number: Button = Button.new()
+	UiStyle.style_button(number, "number")
+	assert_eq(_normal_colour(number), Color(0.90, 0.88, 0.82))
+	dark.free()
+	outline.free()
+	number.free()
+
+
+func test_start_screen_buttons_are_gold_except_the_untouched_host_button() -> void:
+	var s: StartScreen = StartScreen.new()
+	add_child_autofree(s)
 	var gold: Color = GameSkin.get_current().color("accent")
-	for kind in ["dark", "primary", "paper_outline", "number"]:
-		var b: Button = Button.new()
-		UiStyle.style_button(b, kind)
-		assert_eq(_normal_colour(b), gold, kind)
-		b.free()
+	for b in [s.join_button, s.settings_button, s.exit_button]:
+		assert_eq(_normal_colour(b), gold, b.text)
+
+
+func test_exit_to_start_on_the_winner_screen_is_gold() -> void:
+	var w: WinnerScreen = WinnerScreen.new()
+	add_child_autofree(w)
+	assert_eq(_normal_colour(w.exit_button), GameSkin.get_current().color("accent"))
 
 
 func test_a_pressed_button_is_a_darker_gold() -> void:
 	var b: Button = Button.new()
-	UiStyle.style_button(b, "primary")
+	UiStyle.style_button(b, "gold")
 	var normal: Color = _normal_colour(b)
 	var pressed: Color = (b.get_theme_stylebox("pressed") as StyleBoxFlat).bg_color
 	assert_lt(pressed.get_luminance(), normal.get_luminance())
@@ -83,8 +111,8 @@ func test_menu_and_info_buttons_are_gold() -> void:
 func test_an_off_switch_is_still_different_from_an_on_switch() -> void:
 	var on: Button = Button.new()
 	var off: Button = Button.new()
-	UiStyle.style_button(on, "primary")
-	UiStyle.style_button(off, "off")
+	UiStyle.style_button(on, "gold")
+	UiStyle.style_button(off, "paper_outline")
 	assert_ne(_normal_colour(on), _normal_colour(off))
 	on.free()
 	off.free()

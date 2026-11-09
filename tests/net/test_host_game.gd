@@ -12,8 +12,7 @@ func _start(settings: SpadesSettings = null, seed_value: int = 8) -> void:
 	rig = NetRig.new(s, seed_value)
 	me = rig.joined("Host", 0, true)
 	ann = rig.joined("Ann", 2)
-	me.send("add_bots")
-	me.send("start_game")
+	rig.start_with_bots(me)
 
 
 func _peer_of(seat: int) -> TestPeer:

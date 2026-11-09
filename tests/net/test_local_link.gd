@@ -95,9 +95,12 @@ func test_a_whole_lobby_and_game_start_works_with_only_a_local_client() -> void:
 	link.poll()
 	assert_eq(me.my_seat, 0)
 	assert_true(me.is_host)
-	me.add_bots()
-	me.start_game()
-	link.poll()
+	for i in [1, 2, 3]:
+		me.add_bot(i)
+		link.poll()
+	while host.phase_name() == "starting":
+		host.step()
+		link.poll()
 	assert_false(me.view.is_empty(), "the host's own player gets a snapshot")
 	var guard: int = 0
 	while not me.view["must_bid"] and guard < 50:

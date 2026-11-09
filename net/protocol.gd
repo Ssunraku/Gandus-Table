@@ -7,7 +7,7 @@ const VERSION: int = 1
 const MAX_BYTES: int = 16384
 const TYPES: Array[String] = [
 	"join_request", "join_accepted", "join_refused", "seat_request", "lobby_state",
-	"add_bots", "start_game", "leave", "rejoin_request", "game_view", "game_paused",
+	"add_bot", "remove_bot", "leave", "rejoin_request", "game_view", "game_paused",
 	"game_resumed", "bid", "swap", "play_card", "next_round", "replace_with_bot",
 	"action_rejected", "game_closed",
 ]

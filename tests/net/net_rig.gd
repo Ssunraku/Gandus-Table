@@ -40,3 +40,20 @@ func run_bots(limit: int = 500) -> int:
 		n += 1
 		net.pump()
 	return n
+
+
+## Runs the 3-2-1 countdown (if one is running) until the game has started.
+func start_countdown() -> void:
+	var guard: int = 0
+	while host.phase_name() == "starting" and guard < 10:
+		guard += 1
+		host.step()
+		net.pump()
+
+
+## The host player fills every free seat with a bot, one tap each, and the countdown runs.
+func start_with_bots(host_player: TestPeer) -> void:
+	for i in range(4):
+		if host.seats[i]["kind"] == "empty":
+			host_player.send("add_bot", {"seat": i})
+	start_countdown()

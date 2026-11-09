@@ -19,9 +19,12 @@ func _make(seed_value: int = 8) -> void:
 	link.poll()
 	me.request_seat(0)
 	link.poll()
-	me.add_bots()
-	me.start_game()
-	link.poll()
+	for i in [1, 2, 3]:
+		me.add_bot(i)
+		link.poll()
+	while host.phase_name() == "starting":
+		host.step()
+		link.poll()
 
 
 func _run_frames(n: int, delta: float = 0.016) -> void:

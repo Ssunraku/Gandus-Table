@@ -27,12 +27,12 @@ Put all phones on the **same Wi-Fi**. Tick each line, and write down anything od
 - [ ] 3. Text is easy to read and buttons are easy to tap, in both **upright** (portrait) and **sideways** (landscape).
 
 **Hosting and joining** (phone A hosts, B, C, D join)
-- [ ] 4. A: Host Game -> Start game (options screen) -> the Lobby shows a 4-letter **room code** and a list of numbers (addresses).
-- [ ] 5. B: Join Game. After a few seconds A's game appears in the list. Tap it. B sees the Lobby.
-- [ ] 6. C: Join Game, type the **room code** and tap Join. C sees the Lobby.
-- [ ] 7. D: Join Game, type A's **address** (one of the numbers from A's Lobby, for example 192.168.1.5) and tap Join. D sees the Lobby.
-- [ ] 8. B, C and D each tap a **free seat**. Everyone's screen updates to show who sits where. The host's options are shown on every phone and cannot be changed there.
-- [ ] 9. Try with only two or three phones too: A taps **Fill with bots**, then **Start game**.
+- [ ] 4. A: Host Game -> Start game (options screen) -> A goes straight to a **table**: A sits at the bottom, the other three seats are blank ("Tap to add a bot"), and the 4-letter **room code** is shown under the table (with a list of numbers if the code does not work).
+- [ ] 5. B: Join Game. After a few seconds A's game appears in the list. Tap it. B sees A's table ("Join ...'s game") with the free seats.
+- [ ] 6. C: Join Game, type the **room code** and tap Join. C sees the same table.
+- [ ] 7. D: Join Game, type A's **address** (one of the numbers under A's table, for example 192.168.1.5) and tap Join. D sees the same table.
+- [ ] 8. B, C and D each tap a **free seat** (it gets a gold ring) and press **Join table**. The table turns so each player is at the bottom, and everyone's screen shows who sits where, live. B can tap another free seat to move. The host's options are shown on every phone and cannot be changed there.
+- [ ] 9. Try with only two or three phones too: A taps each blank seat once to put a **bot** there (tap a bot again to remove it). When all four seats are taken, "Starting in 3, 2, 1" appears and the game starts by itself.
 
 **Playing**
 - [ ] 10. The table opens on every phone. You see your own cards, your name at the bottom, your partner opposite, and everybody's real name.

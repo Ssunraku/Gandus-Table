@@ -14,14 +14,14 @@ func _go_to_host() -> void:
 	main.start_screen.host_button.pressed.emit()
 
 
-## Host options -> Lobby -> fill the empty seats with bots -> start: the table opens.
+## Host options -> the table with free seats -> the host taps each free seat (a bot sits
+## there) -> the 3-2-1 countdown -> the table opens.
 func _start_hosted_game(m: Main = null) -> void:
 	var target: Main = m if m != null else main
 	target.host_screen.start_button.pressed.emit()
-	target.lobby_screen.bots_button.pressed.emit()
-	for i in range(6):
+	for seat in [1, 2, 3]:
+		target.pregame_screen.bot_add_chosen.emit(seat)
 		target.net_tick()
-	target.lobby_screen.start_button.pressed.emit()
 	for i in range(6):
 		target.net_tick()
 

@@ -21,7 +21,7 @@ func _init() -> void:
 	gap.custom_minimum_size = Vector2(0, 20)
 	column.add_child(gap)
 	play_again_button = add_button("Play again", "primary", 340)
-	exit_button = add_button("Exit to start", "dark", 340)
+	exit_button = add_button("Exit to start", "gold", 340)
 	play_again_button.pressed.connect(func() -> void: play_again_pressed.emit())
 	exit_button.pressed.connect(func() -> void: exit_pressed.emit())
 

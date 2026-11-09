@@ -60,46 +60,162 @@ func test_bad_seat_numbers_are_rejected() -> void:
 	assert_eq(rig.host.seats[0]["kind"], "empty")
 
 
-func test_only_the_local_host_player_can_add_bots_and_start() -> void:
+func test_the_host_player_sits_in_seat_zero_on_joining() -> void:
 	var rig: NetRig = NetRig.new()
-	var me: TestPeer = rig.joined("Host", 0, true)
-	var other: TestPeer = rig.joined("Ann", 1)
-	other.send("add_bots")
-	assert_eq(rig.host.seats[2]["kind"], "empty", "a joiner cannot add bots")
-	other.send("start_game")
-	assert_eq(rig.host.phase_name(), "lobby")
-	me.send("add_bots")
+	var me: TestPeer = rig.peer(true)
+	me.send("join_request", {"name": "Host", "as_host": true})
+	assert_eq(rig.host.seats[0]["kind"], "human")
+	assert_eq(rig.host.seats[0]["name"], "Host")
+	var lobby: Dictionary = me.last("lobby_state")
+	assert_eq(int(lobby["you"]), 0)
+	assert_true(lobby["is_host"])
+	assert_eq(rig.host.seats[1]["kind"], "empty")
+
+
+func test_the_host_cannot_change_seat() -> void:
+	var rig: NetRig = NetRig.new()
+	var me: TestPeer = rig.joined("Host", -1, true)
+	me.send("seat_request", {"seat": 2})
+	assert_eq(rig.host.seats[0]["name"], "Host")
+	assert_eq(rig.host.seats[2]["kind"], "empty")
+	assert_eq(me.last("action_rejected")["reason"], "host_seat_fixed")
+
+
+func test_the_host_adds_a_bot_to_one_free_seat_at_a_time() -> void:
+	var rig: NetRig = NetRig.new()
+	var me: TestPeer = rig.joined("Host", -1, true)
+	me.send("add_bot", {"seat": 2})
 	assert_eq(rig.host.seats[2]["kind"], "bot")
-	assert_eq(rig.host.seats[0]["kind"], "human", "taken seats are left alone")
-	me.send("start_game")
-	assert_eq(rig.host.phase_name(), "playing")
+	assert_eq(rig.host.seats[1]["kind"], "empty", "only the tapped seat gets a bot")
+	assert_eq(rig.host.seats[3]["kind"], "empty")
+	assert_eq(rig.host.phase_name(), "lobby")
+	me.send("add_bot", {"seat": 2})
+	assert_eq(me.last("action_rejected")["reason"], "seat_taken")
+	me.send("add_bot", {"seat": 9})
+	assert_eq(me.last("action_rejected")["reason"], "bad_seat")
+
+
+func test_a_joiner_cannot_add_or_remove_bots() -> void:
+	var rig: NetRig = NetRig.new()
+	var me: TestPeer = rig.joined("Host", -1, true)
+	var other: TestPeer = rig.joined("Ann", 1)
+	other.send("add_bot", {"seat": 2})
+	assert_eq(rig.host.seats[2]["kind"], "empty")
+	me.send("add_bot", {"seat": 2})
+	other.send("remove_bot", {"seat": 2})
+	assert_eq(rig.host.seats[2]["kind"], "bot")
+
+
+func test_the_host_removes_a_bot_but_not_a_person() -> void:
+	var rig: NetRig = NetRig.new()
+	var me: TestPeer = rig.joined("Host", -1, true)
+	var ann: TestPeer = rig.joined("Ann", 1)
+	me.send("add_bot", {"seat": 2})
+	me.send("remove_bot", {"seat": 2})
+	assert_eq(rig.host.seats[2]["kind"], "empty")
+	me.send("remove_bot", {"seat": 1})
+	assert_eq(rig.host.seats[1]["name"], "Ann")
+	assert_eq(me.last("action_rejected")["reason"], "not_a_bot")
+	assert_not_null(ann)
 
 
 func test_a_remote_peer_cannot_claim_to_be_the_host() -> void:
 	var rig: NetRig = NetRig.new()
 	var p: TestPeer = rig.joined("Fake", 0, false)
 	p.send("join_request", {"name": "Again", "as_host": true})
-	p.send("add_bots")
+	p.send("add_bot", {"seat": 1})
 	assert_eq(rig.host.seats[1]["kind"], "empty")
 	var q: TestPeer = rig.peer(false)
 	q.send("join_request", {"name": "Evil", "as_host": true})
-	q.send("add_bots")
+	q.send("add_bot", {"seat": 1})
 	assert_eq(rig.host.seats[1]["kind"], "empty")
 
 
-func test_start_needs_every_seat_filled() -> void:
+func test_the_game_starts_by_itself_after_a_three_two_one_countdown() -> void:
 	var rig: NetRig = NetRig.new()
-	var me: TestPeer = rig.joined("Host", 0, true)
-	me.send("start_game")
+	var me: TestPeer = rig.joined("Host", -1, true)
+	me.send("add_bot", {"seat": 1})
+	me.send("add_bot", {"seat": 2})
 	assert_eq(rig.host.phase_name(), "lobby")
-	assert_eq(me.last("action_rejected")["reason"], "seats_not_full")
+	assert_eq(rig.host.next_delay(), -1.0, "nothing is due while seats are free")
+	me.send("add_bot", {"seat": 3})
+	assert_eq(rig.host.phase_name(), "starting")
+	assert_eq(int(me.last("lobby_state")["countdown"]), 3)
+	assert_eq(rig.host.next_delay(), 1.0)
+	rig.host.step()
+	rig.pump()
+	assert_eq(int(me.last("lobby_state")["countdown"]), 2)
+	rig.host.step()
+	rig.pump()
+	assert_eq(int(me.last("lobby_state")["countdown"]), 1)
+	assert_eq(rig.host.phase_name(), "starting")
+	rig.host.step()
+	rig.pump()
+	assert_eq(rig.host.phase_name(), "playing")
+	assert_false(me.of_type("game_view").is_empty())
+
+
+func test_removing_a_bot_during_the_countdown_cancels_it() -> void:
+	var rig: NetRig = NetRig.new()
+	var me: TestPeer = rig.joined("Host", -1, true)
+	for i in [1, 2, 3]:
+		me.send("add_bot", {"seat": i})
+	rig.host.step()
+	me.send("remove_bot", {"seat": 3})
+	assert_eq(rig.host.phase_name(), "lobby")
+	assert_eq(int(me.last("lobby_state")["countdown"]), 0)
+	assert_eq(rig.host.next_delay(), -1.0)
+
+
+func test_a_player_leaving_during_the_countdown_cancels_it() -> void:
+	var rig: NetRig = NetRig.new()
+	var me: TestPeer = rig.joined("Host", -1, true)
+	var ann: TestPeer = rig.joined("Ann", 1)
+	me.send("add_bot", {"seat": 2})
+	me.send("add_bot", {"seat": 3})
+	assert_eq(rig.host.phase_name(), "starting")
+	ann.send("leave")
+	assert_eq(rig.host.phase_name(), "lobby")
+	assert_eq(rig.host.seats[1]["kind"], "empty")
+
+
+func test_a_seat_cannot_be_changed_once_the_countdown_runs() -> void:
+	var rig: NetRig = NetRig.new()
+	var me: TestPeer = rig.joined("Host", -1, true)
+	var ann: TestPeer = rig.joined("Ann", 1)
+	me.send("add_bot", {"seat": 2})
+	me.send("add_bot", {"seat": 3})
+	ann.send("seat_request", {"seat": 2})
+	assert_eq(rig.host.seats[1]["name"], "Ann")
+	assert_eq(ann.last("action_rejected")["reason"], "starting")
+
+
+func test_someone_who_never_sat_is_sent_away_when_the_game_starts() -> void:
+	var rig: NetRig = NetRig.new()
+	var me: TestPeer = rig.joined("Host", -1, true)
+	var watcher: TestPeer = rig.joined("Watcher")
+	for i in [1, 2, 3]:
+		me.send("add_bot", {"seat": i})
+	rig.start_countdown()
+	assert_eq(rig.host.phase_name(), "playing")
+	assert_eq(watcher.last("join_refused")["reason"], "game_started")
+
+
+func test_the_table_state_carries_the_room_code_and_addresses() -> void:
+	var rig: NetRig = NetRig.new()
+	rig.host.room_code = "KFDM"
+	rig.host.host_addresses = ["192.168.1.5"]
+	var p: TestPeer = rig.joined("Sam")
+	var lobby: Dictionary = p.last("lobby_state")
+	assert_eq(lobby["room_code"], "KFDM")
+	assert_eq(lobby["addresses"], ["192.168.1.5"])
+	assert_eq(int(lobby["countdown"]), 0)
 
 
 func test_join_after_start_is_refused() -> void:
 	var rig: NetRig = NetRig.new()
-	var me: TestPeer = rig.joined("Host", 0, true)
-	me.send("add_bots")
-	me.send("start_game")
+	var me: TestPeer = rig.joined("Host", -1, true)
+	rig.start_with_bots(me)
 	var late: TestPeer = rig.joined("Late")
 	assert_eq(late.last("join_refused")["reason"], "game_started")
 

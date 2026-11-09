@@ -104,7 +104,7 @@ func _make_chip(skin: GameSkin) -> Label:
 
 
 func _style_button(b: Button, _skin: GameSkin) -> void:
-	UiStyle.style_button(b, "dark")
+	UiStyle.style_button(b, "gold")
 
 
 func _ready() -> void:

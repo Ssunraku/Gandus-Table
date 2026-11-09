@@ -24,8 +24,7 @@ func _four(seed_value: int = 8) -> void:
 		c.join("P%d" % i, i == 0)
 		c.request_seat(i)
 		rig.pump()
-	clients[0].start_game()
-	rig.pump()
+	rig.start_countdown()
 
 
 func _bid_everyone() -> void:

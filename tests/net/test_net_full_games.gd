@@ -25,9 +25,11 @@ func _setup(humans: Array[int], settings: SpadesSettings = null, seed_value: int
 		c.join("P%d" % seat, seat == 0)
 		c.request_seat(seat)
 		rig.pump()
-	clients[0].add_bots()
-	clients[0].start_game()
-	rig.pump()
+	for seat in range(4):
+		if not humans.has(seat):
+			clients[0].add_bot(seat)
+			rig.pump()
+	rig.start_countdown()
 
 
 ## Cards ({"s","r"} dictionaries) found anywhere inside a value, as "s,r" strings.

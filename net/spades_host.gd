@@ -1,7 +1,8 @@
 class_name SpadesHost
 extends RefCounted
-## The host side of a network game: a lobby (join, pick seats, add bots, start) and then
-## the game itself. The host is the only place the real game exists: players send
+## The host side of a network game: a pre-game table (join, pick seats, the host adds bots
+## one seat at a time; when all four seats are taken a 3-2-1 countdown starts the game) and
+## then the game itself. The host is the only place the real game exists: players send
 ## requests, the host checks them with the normal rules and sends each player a snapshot
 ## of what that player may know. A player's seat always comes from their connection,
 ## never from a field in their message.
@@ -22,6 +23,7 @@ var session: SpadesSession
 var paused: bool = false
 
 var _phase: String = "lobby"
+var _countdown: int = 0  # 3, 2, 1 while phase is "starting"
 var _joined: Dictionary = {}  # peer id -> {"name": String, "token": String}
 var _seq: int = 0
 var _last_trick_winner: int = -1
@@ -42,7 +44,7 @@ static func _empty_seat() -> Dictionary:
 	return {"kind": "empty", "name": "", "peer": -1, "token": ""}
 
 
-## "lobby", "playing" or "closed".
+## "lobby", "starting" (the 3-2-1 countdown), "playing" or "closed".
 func phase_name() -> String:
 	return _phase
 
@@ -70,31 +72,35 @@ func _on_message(peer: int, text: String) -> void:
 			_on_seat_request(peer, m)
 		"leave":
 			_on_leave(peer)
-		"add_bots":
-			if peer == host_peer and _phase == "lobby":
-				for i in range(4):
-					if seats[i]["kind"] == "empty":
-						seats[i] = {"kind": "bot", "name": BOT_NAMES[i], "peer": -1, "token": ""}
-				_send_lobby()
-		"start_game":
-			_on_start(peer)
+		"add_bot":
+			_on_add_bot(peer, m)
+		"remove_bot":
+			_on_remove_bot(peer, m)
 		"bid", "swap", "play_card", "next_round":
 			_on_game_action(peer, m)
 		"replace_with_bot":
 			_on_replace(peer, m)
 
 
+func _in_lobby() -> bool:
+	return _phase == "lobby" or _phase == "starting"
+
+
+func _empty_seats() -> int:
+	var n: int = 0
+	for s in seats:
+		if s["kind"] == "empty":
+			n += 1
+	return n
+
+
 func _on_join(peer: int, m: Dictionary) -> void:
-	if _phase != "lobby":
+	if not _in_lobby():
 		_send(peer, "join_refused", {"reason": "game_started"})
 		return
 	if _joined.has(peer):
 		return
-	var bots: int = 0
-	for s in seats:
-		if s["kind"] == "bot":
-			bots += 1
-	if _joined.size() + bots >= 4:
+	if _empty_seats() == 0:
 		_send(peer, "join_refused", {"reason": "full"})
 		return
 	var taken: Array[String] = []
@@ -107,12 +113,16 @@ func _on_join(peer: int, m: Dictionary) -> void:
 	var as_host: bool = m.get("as_host", false) == true and transport.is_local_peer(peer)
 	if as_host:
 		host_peer = peer
+		seats[0] = {"kind": "human", "name": player_name, "peer": peer, "token": token}  # the host always sits at the bottom
 	_send(peer, "join_accepted", {"token": token, "name": player_name, "is_host": as_host})
-	_send_lobby()
+	_after_lobby_change()
 
 
 func _on_seat_request(peer: int, m: Dictionary) -> void:
-	if _phase != "lobby" or not _joined.has(peer):
+	if not _in_lobby() or not _joined.has(peer):
+		return
+	if _phase == "starting":
+		_reject(peer, "starting")
 		return
 	if not (m.get("seat") is float or m.get("seat") is int):
 		_reject(peer, "bad_seat")
@@ -120,6 +130,10 @@ func _on_seat_request(peer: int, m: Dictionary) -> void:
 	var seat: int = int(m["seat"])
 	if seat < 0 or seat > 3:
 		_reject(peer, "bad_seat")
+		return
+	if peer == host_peer:
+		if seat != 0:
+			_reject(peer, "host_seat_fixed")
 		return
 	if seats[seat]["kind"] != "empty":
 		_reject(peer, "seat_taken")
@@ -129,6 +143,59 @@ func _on_seat_request(peer: int, m: Dictionary) -> void:
 		seats[old] = _empty_seat()
 	var j: Dictionary = _joined[peer]
 	seats[seat] = {"kind": "human", "name": j["name"], "peer": peer, "token": j["token"]}
+	_after_lobby_change()
+
+
+## Host only: a bot sits in one free seat.
+func _on_add_bot(peer: int, m: Dictionary) -> void:
+	if peer != host_peer or not _in_lobby():
+		return
+	var seat: int = _seat_arg(peer, m)
+	if seat < 0:
+		return
+	if seats[seat]["kind"] != "empty":
+		_reject(peer, "seat_taken")
+		return
+	seats[seat] = {"kind": "bot", "name": BOT_NAMES[seat], "peer": -1, "token": ""}
+	_after_lobby_change()
+
+
+## Host only: a bot leaves its seat (people are never removed this way).
+func _on_remove_bot(peer: int, m: Dictionary) -> void:
+	if peer != host_peer or not _in_lobby():
+		return
+	var seat: int = _seat_arg(peer, m)
+	if seat < 0:
+		return
+	if seats[seat]["kind"] != "bot":
+		_reject(peer, "not_a_bot")
+		return
+	seats[seat] = _empty_seat()
+	_after_lobby_change()
+
+
+## The seat number in a message, or -1 (after telling the sender) when it is not 0..3.
+func _seat_arg(peer: int, m: Dictionary) -> int:
+	if not (m.get("seat") is float or m.get("seat") is int):
+		_reject(peer, "bad_seat")
+		return -1
+	var seat: int = int(m["seat"])
+	if seat < 0 or seat > 3:
+		_reject(peer, "bad_seat")
+		return -1
+	return seat
+
+
+## After any change at the pre-game table: all four seats taken starts the countdown,
+## a free seat (again) cancels it. Then everybody is told.
+func _after_lobby_change() -> void:
+	if _empty_seats() == 0:
+		if _phase == "lobby":
+			_phase = "starting"
+			_countdown = 3
+	elif _phase == "starting":
+		_phase = "lobby"
+		_countdown = 0
 	_send_lobby()
 
 
@@ -136,14 +203,14 @@ func _on_leave(peer: int) -> void:
 	if not _joined.has(peer):
 		return
 	var seat: int = _seat_of(peer)
-	if _phase == "lobby":
-		if seat >= 0:
-			seats[seat] = _empty_seat()
-		_joined.erase(peer)
+	if _in_lobby():
 		if peer == host_peer:
 			close("host_left")
 			return
-		_send_lobby()
+		if seat >= 0:
+			seats[seat] = _empty_seat()
+		_joined.erase(peer)
+		_after_lobby_change()
 	elif _phase == "playing":
 		if peer == host_peer:
 			close("host_left")
@@ -154,26 +221,24 @@ func _on_leave(peer: int) -> void:
 		_after_seat_change()
 
 
-func _on_start(peer: int) -> void:
-	if peer != host_peer or _phase != "lobby":
-		return
+## The countdown reached zero: unseated onlookers are sent away and the cards are dealt.
+func _begin_game() -> void:
 	var humans: Array[int] = []
 	var names: Dictionary = {}
 	for i in range(4):
-		if seats[i]["kind"] == "empty":
-			_reject(peer, "seats_not_full")
-			return
 		if seats[i]["kind"] == "human":
 			humans.append(i)
 		names[i] = seats[i]["name"]
-	if humans.is_empty():
-		_reject(peer, "no_humans")
-		return
+	for p in _joined.keys():
+		if _seat_of(p) < 0:
+			_send(p, "join_refused", {"reason": "game_started"})
+			_joined.erase(p)
 	session = SpadesSession.new(settings, game_seed)
 	session.set_human_seats(humans)
 	session.set_names(names)
 	session.start()
 	_phase = "playing"
+	_countdown = 0
 	_send_views({"kind": "deal", "seat": -1})
 
 
@@ -283,12 +348,12 @@ func _on_peer_disconnected(peer: int) -> void:
 	if peer == host_peer:
 		close("host_left")
 		return
-	if _phase == "lobby":
+	if _in_lobby():
 		var seat: int = _seat_of(peer)
 		if seat >= 0:
 			seats[seat] = _empty_seat()
 		_joined.erase(peer)
-		_send_lobby()
+		_after_lobby_change()
 	elif _phase == "playing":
 		var s: int = _seat_of(peer)
 		_joined.erase(peer)
@@ -318,10 +383,13 @@ func _on_rejoin(peer: int, m: Dictionary) -> void:
 const BOT_PAUSE: float = 0.7
 const TRICK_HOLD: float = 1.2
 const DEAL_WAIT: float = 1.8
+const COUNTDOWN_TICK: float = 1.0
 
 ## Seconds to wait before the next step() (at pace 1), or -1.0 when nothing is due: a person
 ## has to act, the game is paused, the round is over, or the game has not started / is closed.
 func next_delay() -> float:
+	if _phase == "starting":
+		return COUNTDOWN_TICK
 	if _phase != "playing" or session == null or paused:
 		return -1.0
 	if session.trick_pending():
@@ -337,6 +405,13 @@ func next_delay() -> float:
 ## Does exactly one automatic thing: clear a finished trick, or let one bot act.
 ## Returns false when the game is waiting for a person (or paused, or over).
 func step() -> bool:
+	if _phase == "starting":
+		_countdown -= 1
+		if _countdown <= 0:
+			_begin_game()
+		else:
+			_send_lobby()
+		return true
 	if _phase != "playing" or session == null or paused:
 		return false
 	_just_dealt = false
@@ -387,6 +462,9 @@ func _send_lobby() -> void:
 			"settings": Wire.settings_to_dict(settings),
 			"you": _seat_of(p),
 			"is_host": p == host_peer,
+			"countdown": _countdown,
+			"room_code": room_code,
+			"addresses": host_addresses,
 		})
 
 

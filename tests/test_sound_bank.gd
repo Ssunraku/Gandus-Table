@@ -65,10 +65,9 @@ func test_game_sound_events_reach_the_sound_bank() -> void:
 	add_child_autofree(main)
 	main.start_screen.host_button.pressed.emit()
 	main.host_screen.start_button.pressed.emit()
-	main.lobby_screen.bots_button.pressed.emit()
-	for i in range(6):
+	for seat in [1, 2, 3]:
+		main.pregame_screen.bot_add_chosen.emit(seat)
 		main.net_tick()
-	main.lobby_screen.start_button.pressed.emit()
 	for i in range(6):
 		main.net_tick()
 	watch_signals(main.game)

@@ -34,7 +34,7 @@ var name_screen: NameScreen
 var start_screen: StartScreen
 var host_screen: HostOptionsScreen
 var join_screen: JoinScreen
-var lobby_screen: LobbyScreen
+var pregame_screen: PreGameScreen
 var settings_screen: SettingsScreen
 var winner_screen: WinnerScreen
 var game: GameScreen = null
@@ -79,7 +79,7 @@ func _init() -> void:
 	start_screen = StartScreen.new()
 	host_screen = HostOptionsScreen.new()
 	join_screen = JoinScreen.new()
-	lobby_screen = LobbyScreen.new()
+	pregame_screen = PreGameScreen.new()
 	settings_screen = SettingsScreen.new()
 	winner_screen = WinnerScreen.new()
 	for s in _screens():
@@ -95,10 +95,10 @@ func _init() -> void:
 	join_screen.back_pressed.connect(_close_join)
 	join_screen.join_chosen.connect(_join)
 	join_screen.code_chosen.connect(_search_code)
-	lobby_screen.seat_chosen.connect(func(seat: int) -> void: _client.request_seat(seat))
-	lobby_screen.add_bots_pressed.connect(func() -> void: _client.add_bots())
-	lobby_screen.start_pressed.connect(func() -> void: _client.start_game())
-	lobby_screen.leave_pressed.connect(func() -> void: _leave_network(""))
+	pregame_screen.seat_chosen.connect(func(seat: int) -> void: _client.request_seat(seat))
+	pregame_screen.bot_add_chosen.connect(func(seat: int) -> void: _client.add_bot(seat))
+	pregame_screen.bot_remove_chosen.connect(func(seat: int) -> void: _client.remove_bot(seat))
+	pregame_screen.leave_pressed.connect(func() -> void: _leave_network(""))
 	settings_screen.back_pressed.connect(func() -> void: _show(start_screen))
 	settings_screen.sound_toggled.connect(func(on: bool) -> void: sound.enabled = on)
 	settings_screen.volume_changed.connect(func(percent: float) -> void: sound.volume = percent / 100.0)
@@ -107,7 +107,7 @@ func _init() -> void:
 
 
 func _screens() -> Array:
-	return [name_screen, start_screen, host_screen, join_screen, lobby_screen, settings_screen, winner_screen]
+	return [name_screen, start_screen, host_screen, join_screen, pregame_screen, settings_screen, winner_screen]
 
 
 func _ready() -> void:
@@ -128,7 +128,7 @@ func _process(delta: float) -> void:
 	net_tick(delta)
 
 
-const VERSION: String = "0.1.1"
+const VERSION: String = "0.1.2"
 
 
 ## The line at the bottom of Settings: what this build is and how it is running.
@@ -153,6 +153,7 @@ func _update_scale() -> void:
 	var wanted: Vector2i = design_size_for(Vector2(w.size))
 	if w.content_scale_size != wanted:
 		w.content_scale_size = wanted
+	pregame_screen.set_ui_scale(1.4 if wanted.x < wanted.y else 1.0)
 
 
 ## One beat of the network side: delivers messages, runs the host's steps, checks timers.
@@ -253,9 +254,8 @@ func _start_hosting(settings: SpadesSettings) -> void:
 	add_child(_runner)
 	_is_hosting = true
 	_in_net_game = false
-	_client.join(_my_name(), true)
-	_client.request_seat(0)
-	_show(lobby_screen)
+	_client.join(_my_name(), true)  # (the host is seated at the bottom automatically)
+	_show(pregame_screen)
 	net_tick(0.0)
 
 
@@ -274,8 +274,7 @@ func _discovery_info() -> Dictionary:
 
 
 func _refresh_lobby() -> void:
-	var addresses: Array[String] = LanDiscovery.local_addresses() if (_is_hosting and real_network) else ([] as Array[String])
-	lobby_screen.show_lobby(_client.lobby, _is_hosting, _room_code if _is_hosting else "", addresses)
+	pregame_screen.show_state(_client.lobby, _is_hosting)
 	if _discovery != null and _host != null:
 		_discovery.update_info(_discovery_info())
 
@@ -386,7 +385,7 @@ func _on_joiner_connected(_peer: int) -> void:
 func _check_joining() -> void:
 	if _client == null or _is_hosting or _in_net_game or _reconnecting:
 		return
-	if lobby_screen.visible:
+	if pregame_screen.visible:
 		return
 	var failed: bool = _wifi != null and _wifi.status == "failed"
 	var stuck: bool = _clock - _connect_started > JOIN_TIMEOUT
@@ -401,6 +400,7 @@ func _hook_client() -> void:
 	_client.lobby_changed.connect(_on_lobby_changed)
 	_client.view_changed.connect(_on_view_changed)
 	_client.refused.connect(_on_refused)
+	_client.rejected.connect(_on_rejected)
 	_client.closed.connect(_on_closed)
 	_client.connection_lost.connect(_on_connection_lost)
 
@@ -408,9 +408,10 @@ func _hook_client() -> void:
 func _on_lobby_changed() -> void:
 	if _in_net_game or _client == null:
 		return
+	pregame_screen.set_notice("")
 	_refresh_lobby()
 	if not _is_hosting and join_screen.visible:
-		_show(lobby_screen)
+		_show(pregame_screen)
 
 
 func _on_view_changed() -> void:
@@ -446,6 +447,19 @@ func _on_game_finished(winner_team: int, scores: Array[int]) -> void:
 	winner_screen.play_again_button.visible = false  # (not for network games yet)
 	_drop_game()
 	_show(winner_screen)
+
+
+## The host said no to a request made at the table before the game.
+func _on_rejected(reason: String) -> void:
+	if _in_net_game or not pregame_screen.visible:
+		return
+	match reason:
+		"seat_taken":
+			pregame_screen.set_notice("That seat was just taken. Pick another one.")
+		"starting":
+			pregame_screen.set_notice("The game is about to start.")
+		_:
+			pregame_screen.set_notice("")
 
 
 func _on_refused(reason: String) -> void:

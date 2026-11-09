@@ -24,9 +24,10 @@ func _start(settings: SpadesSettings = null) -> void:
 	ann.join("Ann")
 	ann.request_seat(2)
 	rig.pump()
-	me.add_bots()
-	me.start_game()
+	me.add_bot(1)
+	me.add_bot(3)
 	rig.pump()
+	rig.start_countdown()
 	src = RemoteSource.new(me)
 	screen = GameScreen.new()
 	screen.pace = 0.0

@@ -105,14 +105,14 @@ func _build_menu() -> PanelContainer:
 	resume.text = "Resume"
 	resume.custom_minimum_size = Vector2(260, 54)
 	resume.add_theme_font_size_override("font_size", 22)
-	UiStyle.style_button(resume, "primary")
+	UiStyle.style_button(resume, "gold")
 	resume.pressed.connect(_resume)
 	box.add_child(resume)
 	var leave: Button = Button.new()
 	leave.text = "Exit to start"
 	leave.custom_minimum_size = Vector2(260, 54)
 	leave.add_theme_font_size_override("font_size", 22)
-	UiStyle.style_button(leave, "paper_outline")
+	UiStyle.style_button(leave, "gold")
 	leave.pressed.connect(_leave)
 	box.add_child(leave)
 	return p

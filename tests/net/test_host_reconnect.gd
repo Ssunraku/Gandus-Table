@@ -17,8 +17,7 @@ func _start(with_bo: bool = false, settings: SpadesSettings = null) -> void:
 	ann = rig.joined("Ann", 2)
 	if with_bo:
 		bo = rig.joined("Bo", 1)
-	me.send("add_bots")
-	me.send("start_game")
+	rig.start_with_bots(me)
 
 
 func _token(p: TestPeer) -> String:

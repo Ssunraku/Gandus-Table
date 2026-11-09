@@ -88,7 +88,7 @@ func _add_toggle(box: VBoxContainer, key: String, text: String, on: bool) -> voi
 
 func _style_toggle(b: Button) -> void:
 	b.text = "On" if b.button_pressed else "Off"
-	UiStyle.style_button(b, "primary" if b.button_pressed else "off")
+	UiStyle.style_button(b, "primary" if b.button_pressed else "paper_outline")
 
 
 func _add_stepper(box: VBoxContainer, text: String, on_step: Callable) -> Label:
@@ -124,7 +124,7 @@ func _cycle_exact() -> void:
 func _refresh_exact() -> void:
 	var names: Array[String] = ["Off", "Easy", "Normal", "Hard"]
 	exact_button.text = names[_exact]
-	UiStyle.style_button(exact_button, "off" if _exact == 0 else "primary")
+	UiStyle.style_button(exact_button, "paper_outline" if _exact == 0 else "primary")
 	var bags: Button = _toggles["bags"]
 	if _exact != 0:
 		if not bags.disabled:
