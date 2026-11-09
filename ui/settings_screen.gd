@@ -11,6 +11,7 @@ signal volume_changed(percent: float)
 signal name_changed(player_name: String)
 
 var name_edit: LineEdit
+var build_label: Label  # "Version 0.1.1 · Wi-Fi: real · ..." (helps when something looks wrong on a device)
 var back_button: Button
 var sound_button: Button
 var volume_slider: HSlider
@@ -81,6 +82,10 @@ func _init() -> void:
 		percent.text = "%d%%" % int(v)
 		volume_changed.emit(v))
 	box.add_child(volume_row)
+	build_label = UiStyle.label("", 14, true, true)
+	build_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	build_label.custom_minimum_size = Vector2(420, 0)
+	box.add_child(build_label)
 	var note: Label = UiStyle.label("More options (card style, table colour) will come later.", 16, true, true)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size = Vector2(420, 0)
@@ -151,4 +156,4 @@ static func _round_knob(diameter: int, colour: Color) -> ImageTexture:
 
 func _style() -> void:
 	sound_button.text = "On" if sound_button.button_pressed else "Off"
-	UiStyle.style_button(sound_button, "primary" if sound_button.button_pressed else "paper_outline")
+	UiStyle.style_button(sound_button, "primary" if sound_button.button_pressed else "off")

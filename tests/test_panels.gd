@@ -235,3 +235,20 @@ func test_info_panel_without_a_last_trick_says_so() -> void:
 	ip.show_info({}, {0: "You"}, {})
 	assert_string_contains(_all_text(ip), "No trick yet")
 	assert_eq(ip.find_children("*", "CardView", true, false).size(), 0)
+
+
+func test_info_panel_shows_the_room_code_big_and_the_address_small() -> void:
+	var ip: InfoPanel = InfoPanel.new()
+	add_child_autofree(ip)
+	ip.show_info({}, {0: "You"}, {}, "KQRT", ["192.168.1.5"] as Array[String])
+	var text: String = _all_text(ip)
+	assert_string_contains(text, "KQRT")
+	assert_string_contains(text, "Room code")
+	assert_string_contains(text, "192.168.1.5")
+
+
+func test_info_panel_without_a_room_code_shows_no_room_code_section() -> void:
+	var ip: InfoPanel = InfoPanel.new()
+	add_child_autofree(ip)
+	ip.show_info({}, {0: "You"}, {})
+	assert_false(_all_text(ip).contains("Room code"))

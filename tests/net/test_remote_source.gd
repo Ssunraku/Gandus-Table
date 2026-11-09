@@ -41,7 +41,7 @@ func test_remote_source_rotates_seats_for_each_viewer() -> void:
 	_four()
 	for i in range(4):
 		var v: Dictionary = sources[i].view()
-		assert_eq(v["names"][0], "You")
+		assert_eq(v["names"][0], "P%d" % i, "your own seat shows your own name")
 		assert_eq(v["names"][2], "P%d" % ((i + 2) % 4), "partner is opposite")
 		assert_eq(v["names"][1], "P%d" % ((i + 1) % 4))
 		assert_eq(v["names"][3], "P%d" % ((i + 3) % 4))

@@ -17,17 +17,17 @@ var quit_enabled: bool = true
 var game_pace: float = 1.0
 ## false = an in-memory network (tests, nothing touches the real network); the real app
 ## sets it to true in main.tscn.
-var real_network: bool = false
+@export var real_network: bool = false
 ## The in-memory network used when real_network is false. Tests that need several phones
 ## give them all the same one.
 var test_network: FakeNetwork
 ## When true, the app picks its design size by orientation (1280x720 sideways, 720x1280
 ## upright) so everything keeps a readable size on a phone held upright. The real app
 ## sets it in main.tscn; tests leave it off.
-var adapt_scale: bool = false
+@export var adapt_scale: bool = false
 ## Where the player's saved name lives. Empty = no saving and no name prompt (tests use this).
 ## The real app sets it in main.tscn.
-var profile_path: String = ""
+@export var profile_path: String = ""
 var profile: PlayerProfile = PlayerProfile.new()
 
 var name_screen: NameScreen
@@ -114,6 +114,8 @@ func _ready() -> void:
 	if adapt_scale:
 		get_window().size_changed.connect(_update_scale)
 		_update_scale()
+	get_window().size_changed.connect(_refresh_build_info)
+	_refresh_build_info()
 	if profile_path == "":
 		return
 	profile.load_from(profile_path)
@@ -124,6 +126,21 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	net_tick(delta)
+
+
+const VERSION: String = "0.1.1"
+
+
+## The line at the bottom of Settings: what this build is and how it is running.
+func build_info_text() -> String:
+	var w: Window = get_window()
+	return "Version %s · Wi-Fi: %s · name saved: %s · screen %dx%d (design %dx%d)" % [
+		VERSION, "real" if real_network else "test only", "yes" if profile_path != "" else "no",
+		w.size.x, w.size.y, w.content_scale_size.x, w.content_scale_size.y]
+
+
+func _refresh_build_info() -> void:
+	settings_screen.build_label.text = build_info_text()
 
 
 ## The design size that suits a window of this shape.
@@ -222,6 +239,9 @@ func _start_hosting(settings: SpadesSettings) -> void:
 	_room_code = RoomCode.generate(rng)
 	_link = LocalLink.new(inner)
 	_host = SpadesHost.new(_link, settings, int(Time.get_ticks_usec() % 1000000))
+	_host.room_code = _room_code
+	if real_network:
+		_host.host_addresses = LanDiscovery.local_addresses()
 	if real_network:
 		_discovery = LanDiscovery.new()
 		_discovery.advertise(_discovery_info())
@@ -420,7 +440,7 @@ func _open_net_game() -> void:
 
 func _on_game_finished(winner_team: int, scores: Array[int]) -> void:
 	var names: Dictionary = game.source.view()["names"] if game != null else {}
-	var teams: Array[String] = ["You and %s" % names.get(2, "Partner"), "%s and %s" % [names.get(1, "?"), names.get(3, "?")]]
+	var teams: Array[String] = ["%s and %s" % [names.get(0, "You"), names.get(2, "Partner")], "%s and %s" % [names.get(1, "?"), names.get(3, "?")]]
 	var win_score: int = _client.view["settings"].win_score
 	winner_screen.show_result(winner_team, scores, win_score, teams)
 	winner_screen.play_again_button.visible = false  # (not for network games yet)

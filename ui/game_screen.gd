@@ -443,7 +443,10 @@ func _leave() -> void:
 
 func _open_info() -> void:
 	var v: Dictionary = source.view()
-	info_panel.show_info(v["bids"], v["names"], v["last_trick"])
+	var addresses: Array[String] = []
+	for a in v.get("addresses", []):
+		addresses.append(str(a))
+	info_panel.show_info(v["bids"], v["names"], v["last_trick"], str(v.get("room_code", "")), addresses)
 	info_panel.visible = true
 	_fit_panels()
 	_fit_panels.call_deferred()

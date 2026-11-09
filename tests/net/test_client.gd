@@ -46,7 +46,7 @@ func test_to_table_state_puts_my_seat_at_the_bottom_for_each_seat() -> void:
 	for i in range(4):
 		var st: TableState = clients[i].to_table_state()
 		assert_eq(st.own_hand.size(), 13)
-		assert_eq(st.seat_names[TableState.Seat.SOUTH], "You")
+		assert_eq(st.seat_names[TableState.Seat.SOUTH], "P%d" % i, "your own seat shows your own name")
 		assert_eq(st.seat_names[TableState.Seat.NORTH], "P%d" % ((i + 2) % 4), "partner opposite")
 		assert_eq(st.seat_names[TableState.Seat.WEST], "P%d" % ((i + 1) % 4))
 		assert_eq(st.seat_names[TableState.Seat.EAST], "P%d" % ((i + 3) % 4))

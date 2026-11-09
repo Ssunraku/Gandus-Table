@@ -249,6 +249,13 @@ static func _decode_view(m: Dictionary) -> Dictionary:
 	v["redeal"] = redeal
 	v["event"] = m["event"] if m.get("event") is Dictionary else {}
 	v["paused"] = m.get("paused", false) == true
+	v["room_code"] = str(m["room_code"]) if m.get("room_code") is String else ""
+	var addresses: Array[String] = []
+	if m.get("addresses") is Array:
+		for a in m["addresses"]:
+			if a is String:
+				addresses.append(a)
+	v["addresses"] = addresses
 	v["settings"] = Wire.settings_from_dict(m["settings"] if m.get("settings") is Dictionary else {})
 	var rr: Dictionary = {}
 	if m.get("round_result") is Dictionary:
@@ -292,7 +299,7 @@ func to_table_state() -> TableState:
 		var rel: int = relative(seat)
 		if rel != TableState.Seat.SOUTH:
 			st.set_card_count(rel as TableState.Seat, int(view["hand_counts"].get(seat, 0)))
-		st.seat_names[rel] = "You" if seat == my_seat else str(view["names"].get(seat, ""))
+		st.seat_names[rel] = str(view["names"].get(seat, ""))
 	for entry in view["trick"]:
 		st.set_played(relative(entry["seat"]) as TableState.Seat, entry["card"])
 	st.dealer_seat = relative(int(view["dealer_seat"])) as TableState.Seat

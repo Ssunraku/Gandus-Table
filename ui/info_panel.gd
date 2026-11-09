@@ -14,11 +14,21 @@ func _init() -> void:
 	add_child(_box)
 
 
-func show_info(bids: Dictionary, names: Dictionary, last_trick: Dictionary) -> void:
+## `room_code` ("" = none) is shown big at the top so a friend can be told it; `addresses`
+## are the host phone's network addresses, shown small as the backup way to join.
+func show_info(bids: Dictionary, names: Dictionary, last_trick: Dictionary, room_code: String = "", addresses: Array[String] = []) -> void:
 	for c in _box.get_children():
 		_box.remove_child(c)
 		c.queue_free()
 	_box.add_child(UiStyle.label("Info", 30))
+	if room_code != "":
+		_box.add_child(UiStyle.label("Room code", 18, true, true))
+		_box.add_child(UiStyle.label(room_code, 52))
+		if not addresses.is_empty():
+			var a: Label = UiStyle.label("Or type: %s" % ", ".join(addresses), 15, true, true)
+			a.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			a.custom_minimum_size = Vector2(300, 0)
+			_box.add_child(a)
 	_box.add_child(UiStyle.label("Bids this round", 18, true, true))
 	for seat in [0, 1, 2, 3]:
 		var row: HBoxContainer = HBoxContainer.new()

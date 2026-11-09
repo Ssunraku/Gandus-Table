@@ -220,3 +220,14 @@ func test_blind_nil_swap_between_two_humans_hides_the_partners_cards() -> void:
 		if hosts_hand.has(c):
 			from_partner += 1
 	assert_eq(from_partner, 1, "only the one swapped card came from the partner")
+
+
+func test_every_snapshot_carries_the_room_code_and_addresses() -> void:
+	_start()
+	rig.host.room_code = "ABCD"
+	rig.host.host_addresses = ["192.168.1.5"] as Array[String]
+	rig.host._send_views({"kind": "x", "seat": -1})
+	rig.pump()
+	var snap: Dictionary = ann.last("game_view")
+	assert_eq(snap["room_code"], "ABCD")
+	assert_eq(snap["addresses"], ["192.168.1.5"])

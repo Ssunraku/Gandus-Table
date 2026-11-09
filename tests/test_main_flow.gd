@@ -156,7 +156,7 @@ func test_winner_screen_names_the_winning_side() -> void:
 	_start_hosted_game()
 	main.game.game_finished.emit(0, [520, 340] as Array[int])
 	assert_true(main.winner_screen.visible)
-	assert_string_contains(main.winner_screen.title_label.text, "You and Pip win")
+	assert_string_contains(main.winner_screen.title_label.text, "Player and Pip win")
 	main.winner_screen.exit_button.pressed.emit()
 	assert_true(main.start_screen.visible)
 	_go_to_host()

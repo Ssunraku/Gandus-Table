@@ -15,6 +15,9 @@ var game_seed: int
 ## peer is -1 for a human whose phone has dropped.
 var seats: Array[Dictionary] = []
 var host_peer: int = -1
+## Shown on every player's Info screen (set by the app).
+var room_code: String = ""
+var host_addresses: Array[String] = []
 var session: SpadesSession
 var paused: bool = false
 
@@ -451,6 +454,8 @@ func _snapshot(seat: int, event: Dictionary) -> Dictionary:
 		"event": event,
 		"paused": paused,
 		"settings": Wire.settings_to_dict(settings),
+		"room_code": room_code,
+		"addresses": host_addresses,
 	}
 	if round_over:
 		var r: Dictionary = session.round_result()

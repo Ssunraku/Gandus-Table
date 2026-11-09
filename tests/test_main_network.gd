@@ -135,7 +135,7 @@ func test_each_phone_keeps_its_own_name_from_its_profile() -> void:
 	_tick()
 	_start_with_bots(host)
 	var names: Dictionary = host.game.source.view()["names"]
-	assert_eq(names[0], "You")
+	assert_eq(names[0], "Hosty", "your own name, not You")
 	assert_eq(names[1], "Ann", "Ann sat at West, the seat after the host's")
 
 
@@ -296,3 +296,17 @@ func test_design_size_follows_the_window_shape() -> void:
 	assert_eq(Main.design_size_for(Vector2(1080, 2400)), Vector2i(720, 1280), "a phone held upright")
 	assert_eq(Main.design_size_for(Vector2(360, 780)), Vector2i(720, 1280))
 	assert_eq(Main.design_size_for(Vector2(800, 800)), Vector2i(1280, 720), "square counts as sideways")
+
+
+func test_the_info_screen_shows_the_room_code_on_every_phone() -> void:
+	var pair: Array[Main] = _two_phone_game()
+	var host: Main = pair[0]
+	var ann: Main = pair[1]
+	_tick(10)
+	for m in [host, ann]:
+		m.game.table.info_button.pressed.emit()
+		var text: String = ""
+		for l in m.game.info_panel.find_children("*", "Label", true, false):
+			text += (l as Label).text + " | "
+		assert_string_contains(text, host._room_code)
+		assert_string_contains(text, "Room code")

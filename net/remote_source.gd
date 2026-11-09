@@ -87,7 +87,7 @@ func _convert() -> Dictionary:
 		won[_rel(seat)] = v["tricks_won"][seat]
 	var names: Dictionary = {}
 	for seat in range(4):
-		names[_rel(seat)] = "You" if seat == client.my_seat else str(v["names"].get(seat, ""))
+		names[_rel(seat)] = str(v["names"].get(seat, ""))  # (your own seat shows your own name, not "You")
 	var last: Dictionary = {}
 	if not (v["last_trick"] as Dictionary).is_empty():
 		last = {"cards": _rel_trick(v["last_trick"]["cards"]), "winner": _rel(int(v["last_trick"]["winner"]))}
@@ -107,6 +107,8 @@ func _convert() -> Dictionary:
 		"legal": v["legal"],
 		"last_trick": last,
 		"names": names,
+		"room_code": v["room_code"],
+		"addresses": v["addresses"],
 	}
 
 
